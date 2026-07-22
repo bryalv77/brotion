@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "sourceMap": true,
+    "declaration": false,
+    "noEmitOnError": false
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "prisma"]
+}

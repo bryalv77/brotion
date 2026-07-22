@@ -1,0 +1,29 @@
+{
+  "name": "@notion-clone/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api-types": {
+      "types": "./dist/api-types.d.ts",
+      "import": "./dist/api-types.js"
+    },
+    "./block-schema": {
+      "types": "./dist/block-schema.d.ts",
+      "import": "./dist/block-schema.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

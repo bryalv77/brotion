@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+**/playwright-report
+**/test-results
+backend/prisma/migrations
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
