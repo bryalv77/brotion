@@ -1,0 +1,11 @@
+# Tasks: 009 — Dark mode + full-height sidebar
+- [ ] 1. tailwind.config.ts: darkMode: "class".
+- [ ] 2. stores/theme.ts (Zustand + persist).
+- [ ] 3. index.html anti-FOUC script.
+- [ ] 4. Sidebar: theme toggle button + h-full.
+- [ ] 5. AppShell: h-full on desktop wrapper.
+- [ ] 6. All component/route files: dark: variants.
+- [ ] 7. editor.css → CSS variables.
+- [ ] 8. index.css → focus-visible variable.
+- [ ] 9. e2e: dark class toggle + sidebar height.
+- [ ] Gate: lint, typecheck, test:e2e.

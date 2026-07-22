@@ -170,11 +170,9 @@ export function PageHeader({ page }: PageHeaderProps) {
                 titleRef.current?.blur();
               }
             }}
-            className="text-4xl font-bold text-neutral-900 outline-none"
+            className="page-title text-4xl font-bold text-neutral-900"
             data-placeholder="Untitled"
-          >
-            {title}
-          </div>
+          >{title}</div>
         </div>
       </div>
 
