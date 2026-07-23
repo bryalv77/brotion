@@ -19,10 +19,36 @@ type PMNode = {
 };
 
 export function blocksToDoc(blocks: BlockDTO[]): { type: "doc"; content: PMNode[] } {
+  // Group table_row blocks under their parent table block for rendering.
+  const grouped = groupTableRows(blocks);
   return {
     type: "doc",
-    content: blocks.length > 0 ? blocks.map(blockToNode) : [emptyParagraph()],
+    content: grouped.length > 0 ? grouped.map(blockToNode) : [emptyParagraph()],
   };
+}
+
+/**
+ * Flatten the flat block list so table_row blocks are nested inside their table
+ * parent as `_rows`. Top-level blocks whose type is `table_row` without a
+ * matching parent are skipped (shouldn't happen with well-formed data).
+ */
+function groupTableRows(blocks: BlockDTO[]): (BlockDTO & { _rows?: BlockDTO[] })[] {
+  const rowsByParent = new Map<string, BlockDTO[]>();
+  for (const b of blocks) {
+    if (b.type === "table_row" && b.parent_block_id) {
+      const existing = rowsByParent.get(b.parent_block_id) ?? [];
+      existing.push(b);
+      rowsByParent.set(b.parent_block_id, existing);
+    }
+  }
+  return blocks
+    .filter((b) => b.type !== "table_row")
+    .map((b) => {
+      if (b.type === "table" && rowsByParent.has(b.id)) {
+        return { ...b, _rows: rowsByParent.get(b.id)! };
+      }
+      return b;
+    });
 }
 
 function blockToNode(block: BlockDTO): PMNode {
@@ -68,6 +94,31 @@ function blockToNode(block: BlockDTO): PMNode {
       };
     case "divider":
       return { type: "horizontalRule" };
+    case "table": {
+      // Build a TipTap table from its child table_row blocks.
+      // The table_row blocks are passed as the 2nd arg (nestedBlocks).
+      const rows = (block as { _rows?: BlockDTO[] })._rows ?? [];
+      const hasHeader = Boolean(c.has_header_row);
+      const tableRows: PMNode[] = rows.map((rowBlock, rowIdx) => {
+        const rowContent = rowBlock.content as unknown as Record<string, unknown>;
+        const cells = Array.isArray(rowContent.cells) ? rowContent.cells : [];
+        const cellNodes: PMNode[] = cells.map((cellRuns: unknown) => ({
+          type: hasHeader && rowIdx === 0 ? "tableHeader" : "tableCell",
+          content: [{ type: "paragraph", content: richTextToProseMirror(cellRuns as unknown[]) }],
+        }));
+        return { type: "tableRow", content: cellNodes };
+      });
+      // Tiptap's Table requires at least one tableRow; fall back to a paragraph
+      // if grouping produced no rows (orphaned table or data corruption).
+      if (tableRows.length === 0) {
+        return { type: "paragraph" };
+      }
+      return { type: "table", content: tableRows };
+    }
+    case "table_row":
+      // table_row blocks are handled by the table case above; standalone rows
+      // shouldn't appear at the top level, but render as an empty paragraph.
+      return { type: "paragraph" };
     case "image":
       return {
         type: "image",
@@ -159,6 +210,33 @@ function nodeToBlocks(node: PMNode): DocBlock[] {
       }];
     case "horizontalRule":
       return [{ type: "divider" as BlockType, content: { type: "divider" } }];
+    case "image":
+      return [{
+        type: "image" as BlockType,
+        content: {
+          type: "image",
+          url: String(node.attrs?.src ?? ""),
+          alt: node.attrs?.alt ? String(node.attrs.alt) : undefined,
+        },
+      }];
+    case "table": {
+      const rows = node.content ?? [];
+      const cols = rows[0]?.content?.length ?? 0;
+      const blocks: DocBlock[] = [{
+        type: "table" as BlockType,
+        content: { type: "table", column_count: cols, has_header_row: true },
+      }];
+      for (const row of rows) {
+        const cells = (row.content ?? []).map((cell) =>
+          proseMirrorToRichText(extractParagraphs(cell.content)),
+        );
+        blocks.push({
+          type: "table_row" as BlockType,
+          content: { type: "table_row", cells },
+        });
+      }
+      return blocks;
+    }
     case "paragraph":
     default:
       return [{

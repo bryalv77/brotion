@@ -11,7 +11,7 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="py-1">
       <div className="mb-1 flex items-center justify-between px-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-neutral-400">
+        <span className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
           Pages
         </span>
         <button
@@ -25,18 +25,22 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
               },
             );
           }}
-          className="rounded px-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700"
+          className="rounded px-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
           title="New page"
         >
           +
         </button>
       </div>
-      {isLoading && <div className="px-2 text-sm text-neutral-400">Loading…</div>}
+      {isLoading && (
+        <div className="px-2 text-sm text-neutral-400 dark:text-neutral-500">Loading…</div>
+      )}
       {pages?.map((p) => (
         <PageTreeNode key={p.id} page={p} workspaceId={workspaceId} />
       ))}
       {pages?.length === 0 && !isLoading && (
-        <div className="px-2 py-1 text-sm text-neutral-400">No pages yet</div>
+        <div className="px-2 py-1 text-sm text-neutral-400 dark:text-neutral-500">
+          No pages yet
+        </div>
       )}
     </div>
   );
@@ -58,7 +62,9 @@ function PageTreeNode({
     <div>
       <div
         className={`group flex items-center gap-1 rounded-md px-2 py-1 text-sm ${
-          isActive ? "bg-neutral-200 font-medium" : "hover:bg-neutral-200"
+          isActive
+            ? "bg-neutral-200 font-medium dark:bg-neutral-700"
+            : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
         }`}
       >
         {page.has_children ? (
@@ -74,13 +80,13 @@ function PageTreeNode({
         <span className="text-xs">{page.icon || "📄"}</span>
         <Link
           to={`/app/${workspaceId}/${page.id}`}
-          className="flex-1 truncate text-neutral-700"
+          className="flex-1 truncate text-neutral-700 dark:text-neutral-300"
         >
           {page.title || "Untitled"}
         </Link>
       </div>
       {expanded && page.has_children && (
-        <div className="ml-4 border-l border-neutral-200 pl-1">
+        <div className="ml-4 border-l border-neutral-200 pl-1 dark:border-neutral-700">
           {children?.map((c) => (
             <PageTreeNode key={c.id} page={c} workspaceId={workspaceId} />
           ))}

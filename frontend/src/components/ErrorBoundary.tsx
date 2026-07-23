@@ -9,9 +9,6 @@ interface State {
   message: string;
 }
 
-/**
- * Catches React render errors and shows a fallback UI instead of a blank screen.
- */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false, message: "" };
 
@@ -27,11 +24,11 @@ export class ErrorBoundary extends Component<Props, State> {
   render(): ReactNode {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-50 p-8">
-          <h1 className="text-2xl font-bold text-neutral-900">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-50 p-8 dark:bg-neutral-950">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
             Something went wrong
           </h1>
-          <p className="text-sm text-neutral-500">{this.state.message}</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{this.state.message}</p>
           <button
             onClick={() => window.location.reload()}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"

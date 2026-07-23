@@ -29,6 +29,15 @@ enum PageAccess {
   VIEWER
 }
 
+enum PropertyType {
+  text
+  number
+  select
+  date
+  checkbox
+  url
+}
+
 enum BlockType {
   paragraph
   heading1
@@ -92,6 +101,7 @@ model Workspace {
   creator User              @relation("WorkspaceCreatedBy", fields: [created_by], references: [id])
   members WorkspaceMember[]
   pages   Page[]
+  databases Database[]
 
   @@map("workspaces")
 }
@@ -134,6 +144,12 @@ model Page {
   updator    User?     @relation("PageLastUpdatedBy", fields: [last_updated_by], references: [id])
   permissions PagePermission[]
   comments   Comment[]
+  database_row Database?   @relation("PageDatabaseRow", fields: [database_id], references: [id], onDelete: SetNull)
+  databases    Database[]  @relation("DatabaseHostPage")
+  property_values PropertyValue[]
+
+  // This page belongs to a Database as a row.
+  database_id  String?
 
   @@index([workspace_id])
   @@index([parent_id])
@@ -213,4 +229,55 @@ model Comment {
   @@index([block_id])
   @@index([page_id])
   @@map("comments")
+}
+
+model Database {
+  id           String   @id @default(cuid())
+  workspace_id String
+  page_id      String
+  title        String   @default("")
+  icon         String?
+  created_by   String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  workspace  Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  page       Page       @relation("DatabaseHostPage", fields: [page_id], references: [id], onDelete: Cascade)
+  rows       Page[]     @relation("PageDatabaseRow")
+  properties Property[]
+
+  @@index([page_id])
+  @@map("databases")
+}
+
+model Property {
+  id          String       @id @default(cuid())
+  database_id String
+  name        String
+  type        PropertyType
+  options     Json?
+  order       Int          @default(0)
+  created_at  DateTime     @default(now())
+
+  database Database        @relation(fields: [database_id], references: [id], onDelete: Cascade)
+  values   PropertyValue[]
+
+  @@index([database_id])
+  @@map("properties")
+}
+
+model PropertyValue {
+  id          String   @id @default(cuid())
+  page_id     String
+  property_id String
+  value       Json
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  page     Page     @relation(fields: [page_id], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [property_id], references: [id], onDelete: Cascade)
+
+  @@unique([page_id, property_id])
+  @@index([page_id])
+  @@map("property_values")
 }

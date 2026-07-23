@@ -11,25 +11,33 @@ export function WorkspaceSwitcher() {
   const current = workspaces?.find((w) => w.id === wsId);
 
   if (isLoading) {
-    return <div className="px-2 py-1.5 text-sm text-neutral-400">Loading…</div>;
+    return (
+      <div className="px-2 py-1.5 text-sm text-neutral-400 dark:text-neutral-500">
+        Loading…
+      </div>
+    );
   }
 
   if (!workspaces || workspaces.length === 0) {
-    return <div className="px-2 py-1.5 text-sm text-neutral-400">No workspaces</div>;
+    return (
+      <div className="px-2 py-1.5 text-sm text-neutral-400 dark:text-neutral-500">
+        No workspaces
+      </div>
+    );
   }
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium hover:bg-neutral-200"
+        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium hover:bg-neutral-200 dark:hover:bg-neutral-700"
       >
         <span className="text-base">{current?.icon || "📁"}</span>
         <span className="flex-1 truncate">{current?.name || "Select workspace"}</span>
         <span className="text-neutral-400">▾</span>
       </button>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-neutral-200 bg-white py-1 shadow-md">
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-neutral-200 bg-white py-1 shadow-md dark:border-neutral-700 dark:bg-neutral-800">
           {workspaces.map((w) => (
             <button
               key={w.id}
@@ -37,7 +45,7 @@ export function WorkspaceSwitcher() {
                 setOpen(false);
                 navigate(`/app/${w.id}`);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-neutral-100"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-neutral-100 dark:hover:bg-neutral-700"
             >
               <span>{w.icon || "📁"}</span>
               <span className="flex-1 truncate">{w.name}</span>

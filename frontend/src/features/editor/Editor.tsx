@@ -5,7 +5,18 @@ import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import Image from "@tiptap/extension-image";
 import type { BlockDTO } from "@notion-clone/shared";
+import { blocksToDoc } from "./serializers.js";
+import { SlashMenu } from "./SlashMenu.js";
+import { useBlockSync } from "./useBlockSync.js";
+import { uploadImage } from "../../api/files.js";
+import { useToast } from "../../stores/toast.js";
+import "./editor.css";
 
 type PMNode = {
   type: string;
@@ -14,10 +25,6 @@ type PMNode = {
   marks?: { type: string; attrs?: Record<string, unknown> }[];
   text?: string;
 };
-import { blocksToDoc } from "./serializers.js";
-import { SlashMenu } from "./SlashMenu.js";
-import { useBlockSync } from "./useBlockSync.js";
-import "./editor.css";
 
 interface EditorProps {
   pageId: string;
@@ -36,6 +43,11 @@ export function Editor({ pageId, blocks }: EditorProps) {
       Underline,
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      Image.configure({ inline: false, allowBase64: false }),
       Placeholder.configure({
         placeholder: "Type '/' for commands, or just start writing…",
       }),
@@ -51,7 +63,6 @@ export function Editor({ pageId, blocks }: EditorProps) {
     },
   });
 
-  // Re-load content when blocks change (e.g. navigating to a different page).
   useEffect(() => {
     if (editor && blocks) {
       editor.commands.setContent(blocksToDoc(blocks));
@@ -94,23 +105,49 @@ export function Editor({ pageId, blocks }: EditorProps) {
         case "divider":
           editor.chain().focus().setHorizontalRule().run();
           break;
+        case "table":
+          editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+          break;
+        case "image":
+          imageInputRef.current?.click();
+          break;
       }
     },
     [editor],
   );
 
+  const { showToast } = useToast();
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleImageUpload(file: File | undefined) {
+    if (!file || !editor) return;
+    try {
+      const attachment = await uploadImage(file, { pageId });
+      editor.chain().focus().setImage({ src: attachment.url, alt: file.name }).run();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Image upload failed");
+    }
+  }
+
   return (
     <div className="nc-editor-wrapper">
       <div className="nc-save-indicator">
         {saveStatus === "saving" && (
-          <span className="text-xs text-neutral-400">Saving…</span>
+          <span className="text-xs text-neutral-400 dark:text-neutral-500">Saving…</span>
         )}
         {saveStatus === "saved" && (
-          <span className="text-xs text-neutral-400">Saved</span>
+          <span className="text-xs text-neutral-400 dark:text-neutral-500">Saved</span>
         )}
       </div>
       <EditorContent editor={editor} className="nc-editor" />
       <SlashMenu editor={editor} onSelect={handleSlashCommand} />
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => void handleImageUpload(e.target.files?.[0])}
+      />
     </div>
   );
 }

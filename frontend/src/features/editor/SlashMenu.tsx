@@ -24,6 +24,8 @@ const ITEMS: MenuItem[] = [
   { label: "Quote", icon: "❝", action: "quote", keywords: "quote blockquote" },
   { label: "Code", icon: "</>", action: "code", keywords: "code block pre" },
   { label: "Divider", icon: "—", action: "divider", keywords: "divider hr line rule" },
+  { label: "Table", icon: "⊞", action: "table", keywords: "table grid" },
+  { label: "Image", icon: "🖼️", action: "image", keywords: "image picture upload photo" },
 ];
 
 export function SlashMenu({ editor, onSelect }: SlashMenuProps) {

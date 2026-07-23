@@ -1,6 +1,5 @@
 import { useToast } from "../stores/toast.js";
 
-/** Simple toast renderer — fixed bottom-right, auto-dismiss after 4s. */
 export function Toaster() {
   const { toasts, dismiss } = useToast();
   if (toasts.length === 0) return null;
@@ -13,7 +12,7 @@ export function Toaster() {
           className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm shadow-lg ${
             t.type === "error"
               ? "bg-red-600 text-white"
-              : "bg-neutral-800 text-white"
+              : "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-neutral-900"
           }`}
         >
           <span>{t.message}</span>

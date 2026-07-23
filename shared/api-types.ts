@@ -51,6 +51,7 @@ export type BlockType =
   | "table_row";
 export type ShareType = "USER" | "PUBLIC_LINK";
 export type PageAccess = "OWNER" | "EDITOR" | "VIEWER";
+export type PropertyType = "text" | "number" | "select" | "date" | "checkbox" | "url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DTOs
@@ -135,6 +136,41 @@ export interface SearchResultDTO {
   title: string;
   snippet: string;
   rank: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Database DTOs (Task 012)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PropertyDTO {
+  id: string;
+  database_id: string;
+  name: string;
+  type: PropertyType;
+  options?: unknown;
+  order: number;
+}
+
+export interface PropertyValueDTO {
+  id: string;
+  property_id: string;
+  value: unknown;
+}
+
+export interface DatabaseDTO {
+  id: string;
+  page_id: string;
+  workspace_id: string;
+  title: string;
+  icon: string | null;
+  properties: PropertyDTO[];
+  rows: DatabaseRowDTO[];
+}
+
+export interface DatabaseRowDTO {
+  page_id: string;
+  title: string;
+  values: PropertyValueDTO[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

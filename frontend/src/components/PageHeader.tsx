@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import type { PageDTO, PageSummaryDTO } from "@notion-clone/shared";
 import { updatePage } from "../api/pages.js";
+import { uploadImage } from "../api/files.js";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "../stores/toast.js";
 import { EmojiPicker } from "./EmojiPicker.js";
 
 interface PageHeaderProps {
@@ -17,7 +19,9 @@ export function PageHeader({ page }: PageHeaderProps) {
   const [coverInput, setCoverInput] = useState("");
   const [hovered, setHovered] = useState(false);
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const titleRef = useRef<HTMLDivElement>(null);
+  const coverFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setTitle(page.title || "");
@@ -95,6 +99,16 @@ export function PageHeader({ page }: PageHeaderProps) {
       .catch(() => {
         /* swallow */
       });
+  }
+
+  async function handleCoverUpload(file: File | undefined) {
+    if (!file) return;
+    try {
+      const attachment = await uploadImage(file, { pageId: page.id });
+      saveCover(attachment.url);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Cover upload failed");
+    }
   }
 
   return (
@@ -193,7 +207,7 @@ export function PageHeader({ page }: PageHeaderProps) {
             placeholder="Paste image URL…"
             value={coverInput}
             onChange={(e) => setCoverInput(e.target.value)}
-            className="flex-1 rounded-md border border-neutral-300 px-3 py-1.5 text-sm outline-none"
+            className="flex-1 rounded-md border border-neutral-300 px-3 py-1.5 text-sm outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
           />
           <button
             onClick={() => coverInput && saveCover(coverInput)}
@@ -202,10 +216,45 @@ export function PageHeader({ page }: PageHeaderProps) {
             Save
           </button>
           <button
+            onClick={() => coverFileRef.current?.click()}
+            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          >
+            Upload
+          </button>
+          <button
             onClick={() => setShowCoverInput(false)}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600"
+            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm text-neutral-600 dark:border-neutral-600 dark:text-neutral-300"
           >
             Cancel
+          </button>
+          <input
+            ref={coverFileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => void handleCoverUpload(e.target.files?.[0])}
+          />
+        </div>
+      )}
+
+      {/* Export buttons */}
+      {hovered && (
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() =>
+              (window.location.href = `/api/v1/pages/${page.id}/export?format=md`)
+            }
+            className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          >
+            📄 Export MD
+          </button>
+          <button
+            onClick={() =>
+              (window.location.href = `/api/v1/pages/${page.id}/export?format=pdf`)
+            }
+            className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          >
+            📕 Export PDF
           </button>
         </div>
       )}

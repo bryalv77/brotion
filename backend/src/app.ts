@@ -29,6 +29,8 @@ import { searchRouter } from "./modules/search/search.routes.js";
 import { filesRouter } from "./modules/files/files.routes.js";
 import { pagePermissionsRouter, sharedRouter } from "./modules/permissions/permissions.routes.js";
 import { pageCommentsRouter, commentsRouter } from "./modules/comments/comments.routes.js";
+import { pageDatabasesRouter, databasesRouter, rowsRouter } from "./modules/databases/databases.routes.js";
+import { exportRouter } from "./modules/export/export.routes.js";
 
 /**
  * Express app composition, separated from `server.ts` so it can be imported
@@ -61,9 +63,13 @@ export function createApp(): Express {
   app.use("/api/v1/pages/:pageId/blocks", pageBlocksRouter);
   app.use("/api/v1/pages/:pageId/permissions", pagePermissionsRouter);
   app.use("/api/v1/pages/:pageId/comments", pageCommentsRouter);
+  app.use("/api/v1/pages/:pageId/export", exportRouter);
   app.use("/api/v1/blocks", blocksRouter);
   app.use("/api/v1/comments", commentsRouter);
   app.use("/api/v1/files", filesRouter);
+  app.use("/api/v1/pages/:pageId/databases", pageDatabasesRouter);
+  app.use("/api/v1/databases", databasesRouter);
+  app.use("/api/v1/rows", rowsRouter);
   app.use("/api/v1/shared", sharedRouter);
 
   // 404 for unmatched API routes (must come before errorHandler to set the body).

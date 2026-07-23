@@ -135,16 +135,18 @@ export const TEXT_BLOCK_TYPES = [
   "todo",
   "quote",
   "callout",
+  "table_row",
 ] as const;
 
 /** Helper: does this block type render children as a nested tree? */
 export function canHaveChildren(
   content: BlockContent,
-): content is ParagraphContent | ListContent | TodoContent {
+): content is ParagraphContent | ListContent | TodoContent | TableContent {
   return (
     content.type === "paragraph" ||
     content.type === "bulleted_list_item" ||
     content.type === "numbered_list_item" ||
-    content.type === "todo"
+    content.type === "todo" ||
+    content.type === "table"
   );
 }

@@ -3,10 +3,6 @@ import { Navigate, useParams } from "react-router-dom";
 import { useWorkspaces } from "../hooks/useWorkspaces.js";
 import { useChildPages } from "../hooks/useChildPages.js";
 
-/**
- * Shown at `/app/:wsId` with no specific page selected. Redirects to the first
- * page if one exists; otherwise shows an empty-state CTA.
- */
 export function WorkspaceView() {
   const { wsId } = useParams();
   const { data: workspaces } = useWorkspaces();
@@ -27,7 +23,7 @@ export function WorkspaceView() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center text-neutral-400">
+    <div className="flex h-full items-center justify-center text-neutral-400 dark:text-neutral-500">
       <div className="text-center">
         <p className="text-lg">No pages yet</p>
         <p className="mt-1 text-sm">Click + in the sidebar to create your first page.</p>

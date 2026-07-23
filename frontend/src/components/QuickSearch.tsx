@@ -31,11 +31,11 @@ export function QuickSearch() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 pt-[15vh]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/20 pt-[15vh] dark:bg-black/50"
       onClick={() => setQuickSearchOpen(false)}
     >
       <div
-        className="w-full max-w-lg rounded-xl bg-white shadow-xl"
+        className="w-full max-w-lg rounded-xl bg-white shadow-xl dark:bg-neutral-800"
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -44,11 +44,11 @@ export function QuickSearch() {
           placeholder="Search pages…"
           value={query}
           onChange={(e) => void handleSearch(e.target.value)}
-          className="w-full rounded-t-xl border-b border-neutral-200 px-4 py-3 text-sm outline-none"
+          className="w-full rounded-t-xl border-b border-neutral-200 px-4 py-3 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
         />
         <div className="max-h-80 overflow-y-auto p-2">
           {results.length === 0 && query.trim() && (
-            <p className="px-2 py-4 text-center text-sm text-neutral-400">
+            <p className="px-2 py-4 text-center text-sm text-neutral-400 dark:text-neutral-500">
               No results
             </p>
           )}
@@ -61,14 +61,14 @@ export function QuickSearch() {
                 setQuery("");
                 setResults([]);
               }}
-              className="flex w-full flex-col gap-1 rounded-lg px-3 py-2 text-left hover:bg-neutral-100"
+              className="flex w-full flex-col gap-1 rounded-lg px-3 py-2 text-left hover:bg-neutral-100 dark:hover:bg-neutral-700"
             >
-              <span className="text-sm font-medium text-neutral-900">
+              <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                 {r.title || "Untitled"}
               </span>
               {r.snippet && (
                 <span
-                  className="text-xs text-neutral-500"
+                  className="text-xs text-neutral-500 dark:text-neutral-400"
                   dangerouslySetInnerHTML={{ __html: r.snippet }}
                 />
               )}
