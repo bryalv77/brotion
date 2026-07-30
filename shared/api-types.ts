@@ -48,10 +48,11 @@ export type BlockType =
   | "code"
   | "image"
   | "table"
-  | "table_row";
+  | "table_row"
+  | "page_ref";
 export type ShareType = "USER" | "PUBLIC_LINK";
 export type PageAccess = "OWNER" | "EDITOR" | "VIEWER";
-export type PropertyType = "text" | "number" | "select" | "date" | "checkbox" | "url";
+export type PropertyType = "text" | "number" | "select" | "date" | "checkbox" | "url" | "formula";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DTOs
@@ -171,6 +172,29 @@ export interface DatabaseRowDTO {
   page_id: string;
   title: string;
   values: PropertyValueDTO[];
+  /** Per-formula-cell computed result. Keyed by property_id. */
+  computed?: Record<string, ComputedCell>;
+}
+
+export type ComputedCellStatus = "ok" | "error";
+
+export interface ComputedCell {
+  status: ComputedCellStatus;
+  value?: string | number | boolean | null;
+  error?: {
+    code:
+      | "parse"
+      | "type"
+      | "circular"
+      | "unknown_property"
+      | "division_by_zero";
+    message: string;
+  };
+}
+
+/** Value stored on a `Property` whose `type === "formula"`. */
+export interface FormulaValue {
+  formula: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

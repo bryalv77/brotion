@@ -10,13 +10,22 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import Image from "@tiptap/extension-image";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
+import { Markdown } from "tiptap-markdown";
 import type { BlockDTO } from "@notion-clone/shared";
 import { blocksToDoc } from "./serializers.js";
 import { SlashMenu } from "./SlashMenu.js";
 import { useBlockSync } from "./useBlockSync.js";
 import { uploadImage } from "../../api/files.js";
 import { useToast } from "../../stores/toast.js";
+import { Callout } from "./extensions/Callout.js";
+import { PageRef } from "./extensions/PageRef.js";
+import { listChildPages } from "../../api/pages.js";
+import { useCreateDatabase } from "../../hooks/useCreateDatabase.js";
 import "./editor.css";
+
+const lowlight = createLowlight(common);
 
 type PMNode = {
   type: string;
@@ -33,12 +42,18 @@ interface EditorProps {
 
 export function Editor({ pageId, blocks }: EditorProps) {
   const { syncBlock, saveStatus } = useBlockSync(pageId);
-  const lastDocRef = useRef<string>("");
+  const createDatabase = useCreateDatabase(pageId);
+  const { showToast } = useToast();
+  // Tracks the doc the editor was last told to render. Used to distinguish
+  // "blocks arrived from the server" (must refresh) from "the user is typing
+  // and the debounced save invalidated the query" (must NOT clobber).
+  const lastServerDocRef = useRef<string>("");
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        codeBlock: false,
       }),
       Underline,
       TaskList,
@@ -48,6 +63,15 @@ export function Editor({ pageId, blocks }: EditorProps) {
       TableCell,
       TableHeader,
       Image.configure({ inline: false, allowBase64: false }),
+      CodeBlockLowlight.configure({ lowlight }),
+      Callout,
+      PageRef,
+      Markdown.configure({
+        breaks: true,
+        linkify: true,
+        transformPastedText: true,
+        transformCopiedText: true,
+      }),
       Placeholder.configure({
         placeholder: "Type '/' for commands, or just start writing…",
       }),
@@ -55,21 +79,22 @@ export function Editor({ pageId, blocks }: EditorProps) {
     content: blocksToDoc(blocks),
     onUpdate: ({ editor }) => {
       const json = editor.getJSON() as unknown as { type: string; content?: PMNode[] };
-      const jsonStr = JSON.stringify(json);
-      if (jsonStr !== lastDocRef.current) {
-        lastDocRef.current = jsonStr;
-        void syncBlock(json, blocks);
-      }
+      void syncBlock(json, blocks);
     },
   });
 
+  // Sync the editor with the latest server blocks whenever they (or the
+  // pageId) change. Without depending on `blocks` here, freshly-imported
+  // blocks arriving after the editor mounts would be invisible until the
+  // user manually reloaded the page.
   useEffect(() => {
-    if (editor && blocks) {
-      editor.commands.setContent(blocksToDoc(blocks));
-      lastDocRef.current = JSON.stringify(editor.getJSON());
+    if (!editor || !blocks) return;
+    const next = JSON.stringify(blocksToDoc(blocks));
+    if (next !== lastServerDocRef.current) {
+      lastServerDocRef.current = next;
+      editor.commands.setContent(JSON.parse(next));
     }
-    // pageId change triggers reload; blocks are passed via setContent.
-  }, [pageId]);
+  }, [pageId, blocks, editor]);
 
   const handleSlashCommand = useCallback(
     (action: string) => {
@@ -105,18 +130,31 @@ export function Editor({ pageId, blocks }: EditorProps) {
         case "divider":
           editor.chain().focus().setHorizontalRule().run();
           break;
+        case "callout":
+          editor.chain().focus().setCallout().run();
+          break;
         case "table":
           editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
           break;
         case "image":
           imageInputRef.current?.click();
           break;
+        case "page_ref":
+          void handlePageRef();
+          break;
+        case "database":
+          createDatabase.mutate(
+            { title: "Untitled", icon: "📊" },
+            {
+              onError: (err) => showToast(err instanceof Error ? err.message : "Could not create database"),
+            },
+          );
+          break;
       }
     },
-    [editor],
+    [editor, createDatabase, showToast],
   );
 
-  const { showToast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   async function handleImageUpload(file: File | undefined) {
@@ -129,14 +167,43 @@ export function Editor({ pageId, blocks }: EditorProps) {
     }
   }
 
+  async function handlePageRef() {
+    if (!editor) return;
+    try {
+      const pages = await listChildPages(pageId, null);
+      if (pages.length === 0) {
+        showToast("No pages found in this workspace to link.");
+        return;
+      }
+      // Simple prompt-based picker for v1.
+      const options = pages.map((p, i) => `${i}: ${p.title || "Untitled"}`).join("\n");
+      const choice = window.prompt(`Choose a page to link:\n\n${options}`, "0");
+      const idx = choice ? parseInt(choice, 10) : -1;
+      if (idx >= 0 && idx < pages.length) {
+        const target = pages[idx];
+        editor
+          .chain()
+          .focus()
+          .insertPageRef({
+            pageId: target.id,
+            title: target.title || "Untitled",
+            icon: target.icon || undefined,
+          })
+          .run();
+      }
+    } catch {
+      showToast("Failed to load pages for linking.");
+    }
+  }
+
   return (
     <div className="nc-editor-wrapper">
       <div className="nc-save-indicator">
         {saveStatus === "saving" && (
-          <span className="text-xs text-neutral-400 dark:text-neutral-500">Saving…</span>
+          <span className="text-xs text-neutral-400 dark:text-neutral-400">Saving…</span>
         )}
         {saveStatus === "saved" && (
-          <span className="text-xs text-neutral-400 dark:text-neutral-500">Saved</span>
+          <span className="text-xs text-neutral-400 dark:text-neutral-400">Saved</span>
         )}
       </div>
       <EditorContent editor={editor} className="nc-editor" />

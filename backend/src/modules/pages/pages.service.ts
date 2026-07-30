@@ -45,6 +45,19 @@ export async function listChildPages(
   );
 }
 
+/** List trashed pages in a workspace. */
+export async function listTrashedPages(workspaceId: string, userId: string) {
+  await assertWorkspaceMember(workspaceId, userId);
+  const rows = await getPrisma().page.findMany({
+    where: {
+      workspace_id: workspaceId,
+      is_deleted: true,
+    },
+    orderBy: [{ deleted_at: "desc" }],
+  });
+  return rows.map((r) => toPageSummaryDTO({ ...r, _childCount: 0 }));
+}
+
 /** Create a page under a workspace (optionally under a parent page). */
 export async function createPage(
   workspaceId: string,

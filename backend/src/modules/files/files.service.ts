@@ -23,6 +23,12 @@ const ALLOWED = new Map<string, string>([
   [".webp", "image/webp"],
   [".svg", "image/svg+xml"],
   [".pdf", "application/pdf"],
+  [".md", "text/markdown"],
+  [".markdown", "text/markdown"],
+  [".txt", "text/plain"],
+  [".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  [".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  [".xls", "application/vnd.ms-excel"],
 ]);
 
 const STORAGE_DIR = join(process.cwd(), "storage");

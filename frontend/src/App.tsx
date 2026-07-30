@@ -5,6 +5,7 @@ import { LoginPage } from "./routes/LoginPage.js";
 import { RegisterPage } from "./routes/RegisterPage.js";
 import { WorkspaceView } from "./routes/WorkspaceView.js";
 import { PageView } from "./routes/PageView.js";
+import { TrashView } from "./routes/TrashView.js";
 import { useWorkspaces } from "./hooks/useWorkspaces.js";
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<WorkspaceIndex />} />
           <Route path=":wsId" element={<WorkspaceView />} />
+          <Route path=":wsId/trash" element={<TrashView />} />
           <Route path=":wsId/:pageId" element={<PageView />} />
         </Route>
       </Route>

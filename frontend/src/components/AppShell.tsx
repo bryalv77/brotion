@@ -45,7 +45,7 @@ export function AppShell() {
         {/* Mobile hamburger */}
         <button
           onClick={() => setMobileSidebarOpen(true)}
-          className="fixed left-3 top-3 z-30 rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-600 shadow-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400 md:hidden"
+          className="fixed left-3 top-3 z-30 rounded-md border border-neutral-200 bg-white p-1.5 text-neutral-600 shadow-sm dark:border-neutral-600 dark:bg-neutral-900 dark:text-neutral-400 md:hidden"
           aria-label="Open sidebar"
         >
           ☰
@@ -54,7 +54,7 @@ export function AppShell() {
         {!sidebarCollapsed && (
           <button
             onClick={toggleSidebar}
-            className="fixed left-[15rem] top-3 z-20 hidden rounded-md border border-neutral-200 bg-white p-1 text-neutral-400 shadow-sm hover:text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:text-neutral-300 md:block"
+            className="fixed left-[15rem] top-3 z-20 hidden rounded-md border border-neutral-200 bg-white p-1 text-neutral-400 shadow-sm hover:text-neutral-700 dark:border-neutral-600 dark:bg-neutral-900 dark:hover:text-neutral-300 md:block"
             aria-label="Collapse sidebar"
           >
             ←
@@ -63,7 +63,7 @@ export function AppShell() {
         {sidebarCollapsed && (
           <button
             onClick={toggleSidebar}
-            className="fixed left-3 top-3 z-20 hidden rounded-md border border-neutral-200 bg-white p-1 text-neutral-400 shadow-sm hover:text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:text-neutral-300 md:block"
+            className="fixed left-3 top-3 z-20 hidden rounded-md border border-neutral-200 bg-white p-1 text-neutral-400 shadow-sm hover:text-neutral-700 dark:border-neutral-600 dark:bg-neutral-900 dark:hover:text-neutral-300 md:block"
             aria-label="Open sidebar"
           >
             →

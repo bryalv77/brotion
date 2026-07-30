@@ -12,9 +12,17 @@
 
 .dark {
   --nc-accent: #60a5fa;
-  --nc-placeholder: #4b5563;
+  --nc-placeholder: #94a3b8;
   --nc-title-hover: rgba(255, 255, 255, 0.06);
-  --nc-title-focus: rgba(255, 255, 255, 0.03);
+  --nc-title-focus: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Base text color (ensures inherited text is readable in both themes) ── */
+body {
+  color: #171717;
+}
+.dark body {
+  color: #f5f5f5;
 }
 
 /* ── Focus-visible ring ──────────────────────────────────────────────────── */

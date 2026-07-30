@@ -124,6 +124,15 @@ function blockToNode(block: BlockDTO): PMNode {
         type: "image",
         attrs: { src: c.url ?? "", alt: c.alt ?? "" },
       };
+    case "page_ref":
+      return {
+        type: "pageRef",
+        attrs: {
+          pageId: c.page_id ?? "",
+          title: c.title ?? "Untitled",
+          icon: c.icon ?? "📄",
+        },
+      };
     default:
       return { type: "paragraph", content: inline };
   }
@@ -133,17 +142,23 @@ function blockToNode(block: BlockDTO): PMNode {
 function richTextToProseMirror(
   runs: unknown[],
 ): PMNode[] {
-  return runs.map((run) => {
+  const out: PMNode[] = [];
+  for (const run of runs) {
     const r = run as Record<string, unknown>;
     const text = String(r.text ?? "");
+    // TipTap rejects empty text nodes ("RangeError: Empty text nodes are
+    // not allowed"), so drop them entirely — the parent paragraph stays
+    // as an empty paragraph, which is a valid structure.
+    if (text === "") continue;
     const marks: { type: string }[] = [];
     if (Array.isArray(r.marks)) {
       for (const m of r.marks) {
         if (typeof m === "string") marks.push({ type: m });
       }
     }
-    return marks.length > 0 ? { type: "text", text, marks } : { type: "text", text };
-  });
+    out.push(marks.length > 0 ? { type: "text", text, marks } : { type: "text", text });
+  }
+  return out;
 }
 
 function emptyParagraph(): PMNode {
@@ -199,6 +214,16 @@ function nodeToBlocks(node: PMNode): DocBlock[] {
         type: "quote" as BlockType,
         content: { type: "quote", rich_text: proseMirrorToRichText(extractParagraphs(node.content)) },
       }];
+    case "callout":
+      return [{
+        type: "callout" as BlockType,
+        content: {
+          type: "callout",
+          rich_text: proseMirrorToRichText(extractParagraphs(node.content)),
+          icon: String(node.attrs?.icon ?? "💡"),
+          color: String(node.attrs?.color ?? "blue"),
+        },
+      }];
     case "codeBlock":
       return [{
         type: "code" as BlockType,
@@ -217,6 +242,16 @@ function nodeToBlocks(node: PMNode): DocBlock[] {
           type: "image",
           url: String(node.attrs?.src ?? ""),
           alt: node.attrs?.alt ? String(node.attrs.alt) : undefined,
+        },
+      }];
+    case "pageRef":
+      return [{
+        type: "page_ref" as BlockType,
+        content: {
+          type: "page_ref",
+          page_id: String(node.attrs?.pageId ?? ""),
+          title: String(node.attrs?.title ?? "Untitled"),
+          icon: node.attrs?.icon ? String(node.attrs.icon) : undefined,
         },
       }];
     case "table": {

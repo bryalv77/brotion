@@ -3,6 +3,7 @@ import { ok, created, noContent } from "../../utils/http.js";
 import { createPageSchema, updatePageSchema } from "./pages.schema.js";
 import {
   listChildPages,
+  listTrashedPages,
   createPage,
   getPageWithBlocks,
   updatePage,
@@ -64,4 +65,10 @@ export async function restorePageHandler(req: Request, res: Response): Promise<v
 export async function duplicatePageHandler(req: Request, res: Response): Promise<void> {
   const page = await duplicatePage(req.params.pageId, req.user!.id);
   created(res, { page });
+}
+
+/** GET /workspaces/:workspaceId/trash */
+export async function listTrashHandler(req: Request, res: Response): Promise<void> {
+  const pages = await listTrashedPages(req.params.workspaceId, req.user!.id);
+  ok(res, { pages });
 }

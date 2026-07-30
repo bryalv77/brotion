@@ -12,7 +12,7 @@ export function WorkspaceSwitcher() {
 
   if (isLoading) {
     return (
-      <div className="px-2 py-1.5 text-sm text-neutral-400 dark:text-neutral-500">
+      <div className="px-2 py-1.5 text-sm text-neutral-400 dark:text-neutral-400">
         Loading…
       </div>
     );
@@ -20,7 +20,7 @@ export function WorkspaceSwitcher() {
 
   if (!workspaces || workspaces.length === 0) {
     return (
-      <div className="px-2 py-1.5 text-sm text-neutral-400 dark:text-neutral-500">
+      <div className="px-2 py-1.5 text-sm text-neutral-400 dark:text-neutral-400">
         No workspaces
       </div>
     );
@@ -37,7 +37,7 @@ export function WorkspaceSwitcher() {
         <span className="text-neutral-400">▾</span>
       </button>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-neutral-200 bg-white py-1 shadow-md dark:border-neutral-700 dark:bg-neutral-800">
+        <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-md border border-neutral-200 bg-white py-1 shadow-md dark:border-neutral-600 dark:bg-neutral-800">
           {workspaces.map((w) => (
             <button
               key={w.id}
@@ -49,7 +49,7 @@ export function WorkspaceSwitcher() {
             >
               <span>{w.icon || "📁"}</span>
               <span className="flex-1 truncate">{w.name}</span>
-              {w.id === wsId && <span className="text-blue-500">✓</span>}
+              {w.id === wsId && <span className="text-blue-500 dark:text-blue-400">✓</span>}
             </button>
           ))}
         </div>

@@ -135,7 +135,7 @@ export function PageHeader({ page }: PageHeaderProps) {
           {icon ? (
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="text-5xl leading-none hover:bg-neutral-100 rounded-lg p-1"
+              className="text-5xl leading-none hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg p-1"
             >
               {icon}
             </button>
@@ -143,7 +143,7 @@ export function PageHeader({ page }: PageHeaderProps) {
             hovered && (
               <button
                 onClick={() => setShowEmojiPicker(true)}
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100"
+                className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
               >
                 😀 Icon
               </button>
@@ -158,7 +158,7 @@ export function PageHeader({ page }: PageHeaderProps) {
           {icon && hovered && (
             <button
               onClick={() => saveIcon(null)}
-              className="absolute -right-2 -top-2 rounded-full bg-neutral-300 px-1 text-xs text-neutral-700 hover:bg-neutral-400"
+              className="absolute -right-2 -top-2 rounded-full bg-neutral-300 px-1 text-xs text-neutral-700 hover:bg-neutral-400 dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
             >
               ×
             </button>
@@ -184,7 +184,7 @@ export function PageHeader({ page }: PageHeaderProps) {
                 titleRef.current?.blur();
               }
             }}
-            className="page-title text-4xl font-bold text-neutral-900"
+            className="page-title text-4xl font-bold text-neutral-900 dark:text-neutral-100"
             data-placeholder="Untitled"
           >{title}</div>
         </div>
@@ -194,7 +194,7 @@ export function PageHeader({ page }: PageHeaderProps) {
       {!coverUrl && hovered && !showCoverInput && (
         <button
           onClick={() => setShowCoverInput(true)}
-          className="mt-4 rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100"
+          className="mt-4 rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           🖼️ Add cover
         </button>
@@ -211,7 +211,7 @@ export function PageHeader({ page }: PageHeaderProps) {
           />
           <button
             onClick={() => coverInput && saveCover(coverInput)}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+            className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
           >
             Save
           </button>
@@ -244,7 +244,7 @@ export function PageHeader({ page }: PageHeaderProps) {
             onClick={() =>
               (window.location.href = `/api/v1/pages/${page.id}/export?format=md`)
             }
-            className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
           >
             📄 Export MD
           </button>
@@ -252,7 +252,7 @@ export function PageHeader({ page }: PageHeaderProps) {
             onClick={() =>
               (window.location.href = `/api/v1/pages/${page.id}/export?format=pdf`)
             }
-            className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            className="rounded-md border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 dark:border-neutral-600 dark:text-neutral-400 dark:hover:bg-neutral-800"
           >
             📕 Export PDF
           </button>

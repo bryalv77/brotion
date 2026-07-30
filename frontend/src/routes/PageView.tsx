@@ -3,10 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { getPage } from "../api/pages.js";
 import { PageHeader } from "../components/PageHeader.js";
 import { Editor } from "../features/editor/Editor.js";
+import { PageAttachments } from "../components/PageAttachments.js";
+import { PageDatabases } from "../components/PageDatabases.js";
 import { useDocumentTitle } from "../hooks/useDocumentTitle.js";
 
 /**
- * Full page view: header (cover/icon/title) + block editor.
+ * Full page view: header (cover/icon/title) + block editor + sheets + attachments.
  */
 export function PageView() {
   const { pageId } = useParams();
@@ -40,6 +42,8 @@ export function PageView() {
     <div className="mx-auto max-w-3xl px-16 py-12">
       <PageHeader page={page} />
       <Editor pageId={page.id} blocks={blocks} />
+      <PageDatabases pageId={page.id} />
+      <PageAttachments pageId={page.id} />
     </div>
   );
 }

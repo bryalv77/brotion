@@ -40,3 +40,24 @@ export function updatePage(
     body: JSON.stringify(body),
   }).then((r) => r.page);
 }
+
+export function deletePage(pageId: string): Promise<void> {
+  return request<void>(`pages/${pageId}`, { method: "DELETE" });
+}
+
+export function restorePage(pageId: string): Promise<PageDTO> {
+  return request<{ page: PageDTO }>(`pages/${pageId}/restore`, {
+    method: "POST",
+    body: "{}",
+  }).then((r) => r.page);
+}
+
+export function permanentDeletePage(pageId: string): Promise<void> {
+  return request<void>(`pages/${pageId}?permanent=true`, { method: "DELETE" });
+}
+
+export function listTrashedPages(workspaceId: string): Promise<PageSummaryDTO[]> {
+  return request<{ pages: PageSummaryDTO[] }>(
+    `workspaces/${workspaceId}/trash`,
+  ).then((r) => r.pages);
+}

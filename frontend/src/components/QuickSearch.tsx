@@ -44,11 +44,11 @@ export function QuickSearch() {
           placeholder="Search pages…"
           value={query}
           onChange={(e) => void handleSearch(e.target.value)}
-          className="w-full rounded-t-xl border-b border-neutral-200 px-4 py-3 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100"
+          className="w-full rounded-t-xl border-b border-neutral-200 px-4 py-3 text-sm outline-none dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100"
         />
         <div className="max-h-80 overflow-y-auto p-2">
           {results.length === 0 && query.trim() && (
-            <p className="px-2 py-4 text-center text-sm text-neutral-400 dark:text-neutral-500">
+            <p className="px-2 py-4 text-center text-sm text-neutral-400 dark:text-neutral-400">
               No results
             </p>
           )}

@@ -23,7 +23,7 @@ export function WorkspaceView() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center text-neutral-400 dark:text-neutral-500">
+    <div className="flex h-full items-center justify-center text-neutral-400 dark:text-neutral-400">
       <div className="text-center">
         <p className="text-lg">No pages yet</p>
         <p className="mt-1 text-sm">Click + in the sidebar to create your first page.</p>

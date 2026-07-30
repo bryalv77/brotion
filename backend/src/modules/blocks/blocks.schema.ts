@@ -22,6 +22,7 @@ export const createBlockSchema = z.object({
     "image",
     "table",
     "table_row",
+    "page_ref",
   ]),
   content: z.record(z.unknown()),
   parent_block_id: z.string().nullable().optional(),

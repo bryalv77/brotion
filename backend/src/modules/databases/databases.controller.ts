@@ -4,14 +4,17 @@ import {
   createDatabaseSchema,
   updateDatabaseSchema,
   createPropertySchema,
+  updatePropertySchema,
   updatePropertyValueSchema,
 } from "./databases.schema.js";
 import {
   createDatabase,
   getDatabase,
+  listPageDatabases,
   updateDatabase,
   deleteDatabase,
   addProperty,
+  updateProperty,
   addRow,
   updatePropertyValue,
 } from "./databases.service.js";
@@ -21,6 +24,12 @@ export async function createDatabaseHandler(req: Request, res: Response): Promis
   const input = createDatabaseSchema.parse(req.body);
   const db = await createDatabase(req.params.pageId, req.user!.id, input);
   created(res, { database: db });
+}
+
+/** GET /pages/:pageId/databases */
+export async function listPageDatabasesHandler(req: Request, res: Response): Promise<void> {
+  const list = await listPageDatabases(req.params.pageId, req.user!.id);
+  ok(res, { databases: list });
 }
 
 /** GET /databases/:databaseId */
@@ -49,6 +58,18 @@ export async function addPropertyHandler(req: Request, res: Response): Promise<v
   created(res, { property: prop });
 }
 
+/** PATCH /databases/:databaseId/properties/:propertyId */
+export async function updatePropertyHandler(req: Request, res: Response): Promise<void> {
+  const input = updatePropertySchema.parse(req.body);
+  const prop = await updateProperty(
+    req.params.databaseId,
+    req.params.propertyId,
+    req.user!.id,
+    input,
+  );
+  ok(res, { property: prop });
+}
+
 /** POST /databases/:databaseId/rows */
 export async function addRowHandler(req: Request, res: Response): Promise<void> {
   const row = await addRow(req.params.databaseId, req.user!.id);
@@ -58,11 +79,11 @@ export async function addRowHandler(req: Request, res: Response): Promise<void> 
 /** PATCH /rows/:rowPageId/properties/:propertyId */
 export async function updatePropertyValueHandler(req: Request, res: Response): Promise<void> {
   const input = updatePropertyValueSchema.parse(req.body);
-  const pv = await updatePropertyValue(
+  const result = await updatePropertyValue(
     req.params.rowPageId,
     req.params.propertyId,
     req.user!.id,
     input.value,
   );
-  ok(res, { value: pv });
+  ok(res, { value: result.value, computed: result.computed });
 }

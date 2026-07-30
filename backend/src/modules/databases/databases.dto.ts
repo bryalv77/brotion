@@ -1,7 +1,9 @@
 import type { Database, Property, PropertyValue } from "@prisma/client";
 import type { Page } from "@prisma/client";
 import type {
+  ComputedCell,
   DatabaseDTO,
+  DatabaseRowDTO,
   PropertyDTO,
   PropertyValueDTO,
 } from "@notion-clone/shared";
@@ -24,7 +26,12 @@ export function toPropertyValueDTO(
 }
 
 export function toDatabaseDTO(
-  db: Database & { properties: Property[]; rows?: Array<Page & { property_values: PropertyValue[] }> },
+  db: Database & {
+    properties: Property[];
+    rows?: Array<Page & { property_values: PropertyValue[] }>;
+    /** Optional pre-computed cells, keyed by row page_id then property_id. */
+    computed?: Record<string, Record<string, ComputedCell>>;
+  },
 ): DatabaseDTO {
   return {
     id: db.id,
@@ -33,10 +40,21 @@ export function toDatabaseDTO(
     title: db.title,
     icon: db.icon,
     properties: db.properties.map(toPropertyDTO),
-    rows: (db.rows ?? []).map((p) => ({
-      page_id: p.id,
-      title: p.title,
-      values: p.property_values.map(toPropertyValueDTO),
-    })),
+    rows: (db.rows ?? []).map((p) => toRowDTO(p, db.computed?.[p.id])),
   };
+}
+
+function toRowDTO(
+  p: Page & { property_values: PropertyValue[] },
+  computed: Record<string, ComputedCell> | undefined,
+): DatabaseRowDTO {
+  const row: DatabaseRowDTO = {
+    page_id: p.id,
+    title: p.title,
+    values: p.property_values.map(toPropertyValueDTO),
+  };
+  if (computed && Object.keys(computed).length > 0) {
+    row.computed = computed;
+  }
+  return row;
 }

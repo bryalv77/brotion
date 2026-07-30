@@ -8,6 +8,7 @@ export function useCreateDatabase(pageId?: string) {
       createDatabase(pageId!, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["page-databases", pageId] });
+      qc.invalidateQueries({ queryKey: ["page", pageId] });
     },
   });
 }

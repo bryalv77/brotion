@@ -10,6 +10,7 @@ import {
   deletePageHandler,
   restorePageHandler,
   duplicatePageHandler,
+  listTrashHandler,
 } from "./pages.controller.js";
 
 // Routes nested under /workspaces/:workspaceId/pages — mergeParams lets us read
@@ -18,6 +19,11 @@ export const workspacePagesRouter = Router({ mergeParams: true });
 workspacePagesRouter.use(requireAuth);
 workspacePagesRouter.get("/", asyncHandler(listPagesHandler));
 workspacePagesRouter.post("/", csrfGuard, asyncHandler(createPageHandler));
+
+// Trash route — nested under /workspaces/:workspaceId/trash
+export const workspaceTrashRouter = Router({ mergeParams: true });
+workspaceTrashRouter.use(requireAuth);
+workspaceTrashRouter.get("/", asyncHandler(listTrashHandler));
 
 // Routes under /pages
 export const pagesRouter = Router();

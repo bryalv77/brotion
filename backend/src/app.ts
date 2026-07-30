@@ -19,18 +19,22 @@ const pinoHttp = (pinoHttpPkg as unknown as {
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import { errorHandler } from "./utils/errors.js";
+import { asyncHandler } from "./utils/asyncHandler.js";
+import { requireAuth } from "./middleware/requireAuth.js";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { meRouter } from "./modules/auth/me.routes.js";
 import { workspacesRouter } from "./modules/workspaces/workspaces.routes.js";
-import { workspacePagesRouter, pagesRouter } from "./modules/pages/pages.routes.js";
+import { workspacePagesRouter, pagesRouter, workspaceTrashRouter } from "./modules/pages/pages.routes.js";
 import { pageBlocksRouter, blocksRouter } from "./modules/blocks/blocks.routes.js";
 import { searchRouter } from "./modules/search/search.routes.js";
 import { filesRouter } from "./modules/files/files.routes.js";
+import { listAttachmentsHandler } from "./modules/files/attachments.controller.js";
 import { pagePermissionsRouter, sharedRouter } from "./modules/permissions/permissions.routes.js";
 import { pageCommentsRouter, commentsRouter } from "./modules/comments/comments.routes.js";
 import { pageDatabasesRouter, databasesRouter, rowsRouter } from "./modules/databases/databases.routes.js";
 import { exportRouter } from "./modules/export/export.routes.js";
+import { importRouter } from "./modules/import/import.routes.js";
 
 /**
  * Express app composition, separated from `server.ts` so it can be imported
@@ -58,12 +62,16 @@ export function createApp(): Express {
   app.use("/api/v1/me", meRouter);
   app.use("/api/v1/workspaces", workspacesRouter);
   app.use("/api/v1/workspaces/:workspaceId/pages", workspacePagesRouter);
+  app.use("/api/v1/workspaces/:workspaceId/trash", workspaceTrashRouter);
   app.use("/api/v1/workspaces/:workspaceId/search", searchRouter);
+  app.use("/api/v1/workspaces/:workspaceId/import", importRouter);
   app.use("/api/v1/pages", pagesRouter);
   app.use("/api/v1/pages/:pageId/blocks", pageBlocksRouter);
   app.use("/api/v1/pages/:pageId/permissions", pagePermissionsRouter);
   app.use("/api/v1/pages/:pageId/comments", pageCommentsRouter);
   app.use("/api/v1/pages/:pageId/export", exportRouter);
+  // Simple inline route for listing attachments (no separate router needed).
+  app.get("/api/v1/pages/:pageId/attachments", requireAuth, asyncHandler(listAttachmentsHandler));
   app.use("/api/v1/blocks", blocksRouter);
   app.use("/api/v1/comments", commentsRouter);
   app.use("/api/v1/files", filesRouter);

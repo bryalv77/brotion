@@ -88,6 +88,20 @@ export interface ImageContent {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Page reference — a clickable card that links to another page (Notion-style).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PageRefContent {
+  type: "page_ref";
+  /** The referenced page's id. */
+  page_id: string;
+  /** Snapshot of the page title at insertion time. */
+  title: string;
+  /** Snapshot of the page icon at insertion time. */
+  icon?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Table — represented as a parent "table" block + N "table_row" child blocks.
 // This keeps each row independently editable/reorderable and lets comments
 // attach to a row if desired.
@@ -121,6 +135,7 @@ export type BlockContent =
   | DividerContent
   | CodeContent
   | ImageContent
+  | PageRefContent
   | TableContent
   | TableRowContent;
 

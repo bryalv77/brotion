@@ -19,7 +19,7 @@ export function EmojiPicker({
 
   return (
     <div
-      className="absolute z-50 mt-1 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+      className="absolute z-50 mt-1 rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-600 dark:bg-neutral-800"
       style={{ width: 280 }}
     >
       <input

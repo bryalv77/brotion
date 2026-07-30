@@ -19,25 +19,31 @@
   --nc-menu-icon: #6b7280;
   --nc-table-border: #e5e5e5;
   --nc-table-header-bg: #f9fafb;
+  --nc-callout-bg: #eff6ff;
+  --nc-callout-border: #dbeafe;
+  --nc-callout-text: #1e40af;
 }
 
 .dark {
-  --nc-blockquote-border: #404040;
-  --nc-blockquote-text: #9ca3af;
+  --nc-blockquote-border: #525252;
+  --nc-blockquote-text: #b3b3b3;
   --nc-code-bg: #0f172a;
   --nc-code-text: #e2e8f0;
   --nc-inline-code-bg: #1e293b;
-  --nc-hr-border: #404040;
-  --nc-task-done: #6b7280;
-  --nc-placeholder: #4b5563;
+  --nc-hr-border: #525252;
+  --nc-task-done: #9ca3af;
+  --nc-placeholder: #94a3b8;
   --nc-menu-bg: #1e1e1e;
-  --nc-menu-border: #404040;
+  --nc-menu-border: #525252;
   --nc-menu-shadow: rgba(0, 0, 0, 0.3);
   --nc-menu-item: #d1d5db;
-  --nc-menu-item-hover: #374151;
+  --nc-menu-item-hover: #3f3f46;
   --nc-menu-icon: #9ca3af;
-  --nc-table-border: #404040;
+  --nc-table-border: #525252;
   --nc-table-header-bg: #262626;
+  --nc-callout-bg: #1e293b;
+  --nc-callout-border: #334155;
+  --nc-callout-text: #93c5fd;
 }
 
 /* ── Editor wrapper ──────────────────────────────────────────────────────── */
@@ -241,6 +247,63 @@
 
 .nc-editor .ProseMirror.resize-cursor {
   cursor: ew-resize;
+}
+
+/* ── Page reference card ──────────────────────────────────────────────────── */
+.nc-editor .ProseMirror .nc-page-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--nc-inline-code-bg);
+  border: 1px solid var(--nc-table-border);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  margin: 0.25rem 0;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 120ms ease;
+}
+
+.nc-editor .ProseMirror .nc-page-ref:hover {
+  background: var(--nc-menu-item-hover);
+}
+
+.nc-page-ref-icon {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.nc-page-ref-title {
+  font-size: 0.875rem;
+  color: var(--nc-menu-item);
+}
+
+/* ── Callout ─────────────────────────────────────────────────────────────── */
+.nc-editor .ProseMirror .nc-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  background: var(--nc-callout-bg);
+  border: 1px solid var(--nc-callout-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.nc-editor .ProseMirror .nc-callout-icon {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.nc-editor .ProseMirror .nc-callout-content {
+  flex: 1;
+  color: var(--nc-callout-text);
+}
+
+.nc-editor .ProseMirror .nc-callout-content p {
+  margin: 0;
 }
 
 /* ── Slash menu ──────────────────────────────────────────────────────────── */

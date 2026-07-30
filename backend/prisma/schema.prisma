@@ -36,6 +36,7 @@ enum PropertyType {
   date
   checkbox
   url
+  formula
 }
 
 enum BlockType {
@@ -53,6 +54,7 @@ enum BlockType {
   image
   table
   table_row
+  page_ref
 }
 
 model User {
@@ -66,9 +68,9 @@ model User {
 
   sessions          Session[]
   workspace_members WorkspaceMember[]
-  workspaces        Workspace[]  @relation("WorkspaceCreatedBy")
-  pages             Page[]       @relation("PageCreatedBy")
-  pages_updated     Page[]       @relation("PageLastUpdatedBy")
+  workspaces        Workspace[]       @relation("WorkspaceCreatedBy")
+  pages             Page[]            @relation("PageCreatedBy")
+  pages_updated     Page[]            @relation("PageLastUpdatedBy")
   attachments       Attachment[]
   page_permissions  PagePermission[]
   comments          Comment[]
@@ -77,12 +79,12 @@ model User {
 }
 
 model Session {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   user_id            String
-  user               User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   refresh_token_hash String
   expires_at         DateTime
-  created_at         DateTime @default(now())
+  created_at         DateTime  @default(now())
   revoked_at         DateTime?
 
   @@index([user_id])
@@ -98,9 +100,9 @@ model Workspace {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  creator User              @relation("WorkspaceCreatedBy", fields: [created_by], references: [id])
-  members WorkspaceMember[]
-  pages   Page[]
+  creator   User              @relation("WorkspaceCreatedBy", fields: [created_by], references: [id])
+  members   WorkspaceMember[]
+  pages     Page[]
   databases Database[]
 
   @@map("workspaces")
@@ -121,35 +123,35 @@ model WorkspaceMember {
 }
 
 model Page {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   workspace_id    String
   parent_id       String?
-  title           String   @default("")
+  title           String    @default("")
   icon            String?
   cover_url       String?
-  content_text    String   @default("") // denormalized text for full-text search
-  is_deleted      Boolean  @default(false)
+  content_text    String    @default("") // denormalized text for full-text search
+  is_deleted      Boolean   @default(false)
   deleted_at      DateTime?
   deleted_by      String?
   created_by      String
   last_updated_by String?
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
 
-  workspace  Workspace @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  parent     Page?     @relation("PageTree", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children   Page[]    @relation("PageTree")
-  blocks     Block[]
-  created    User      @relation("PageCreatedBy", fields: [created_by], references: [id])
-  updator    User?     @relation("PageLastUpdatedBy", fields: [last_updated_by], references: [id])
-  permissions PagePermission[]
-  comments   Comment[]
-  database_row Database?   @relation("PageDatabaseRow", fields: [database_id], references: [id], onDelete: SetNull)
-  databases    Database[]  @relation("DatabaseHostPage")
+  workspace       Workspace        @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  parent          Page?            @relation("PageTree", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children        Page[]           @relation("PageTree")
+  blocks          Block[]
+  created         User             @relation("PageCreatedBy", fields: [created_by], references: [id])
+  updator         User?            @relation("PageLastUpdatedBy", fields: [last_updated_by], references: [id])
+  permissions     PagePermission[]
+  comments        Comment[]
+  database_row    Database?        @relation("PageDatabaseRow", fields: [database_id], references: [id], onDelete: SetNull)
+  databases       Database[]       @relation("DatabaseHostPage")
   property_values PropertyValue[]
 
   // This page belongs to a Database as a row.
-  database_id  String?
+  database_id String?
 
   @@index([workspace_id])
   @@index([parent_id])
@@ -168,8 +170,8 @@ model Block {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 
-  page   Page   @relation(fields: [page_id], references: [id], onDelete: Cascade)
-  parent Block? @relation("BlockTree", fields: [parent_block_id], references: [id], onDelete: Cascade)
+  page     Page    @relation(fields: [page_id], references: [id], onDelete: Cascade)
+  parent   Block?  @relation("BlockTree", fields: [parent_block_id], references: [id], onDelete: Cascade)
   children Block[] @relation("BlockTree")
 
   @@index([page_id])
@@ -197,16 +199,16 @@ model Attachment {
 }
 
 model PagePermission {
-  id         String    @id @default(cuid())
+  id         String     @id @default(cuid())
   page_id    String
   user_id    String?
   share_type ShareType
   access     PageAccess
-  inherit    Boolean   @default(true)
-  token      String?   @unique
-  created_at DateTime  @default(now())
+  inherit    Boolean    @default(true)
+  token      String?    @unique
+  created_at DateTime   @default(now())
 
-  page Page @relation(fields: [page_id], references: [id], onDelete: Cascade)
+  page Page  @relation(fields: [page_id], references: [id], onDelete: Cascade)
   user User? @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([page_id])

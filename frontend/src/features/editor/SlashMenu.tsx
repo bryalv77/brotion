@@ -26,6 +26,9 @@ const ITEMS: MenuItem[] = [
   { label: "Divider", icon: "—", action: "divider", keywords: "divider hr line rule" },
   { label: "Table", icon: "⊞", action: "table", keywords: "table grid" },
   { label: "Image", icon: "🖼️", action: "image", keywords: "image picture upload photo" },
+  { label: "Callout", icon: "💡", action: "callout", keywords: "callout info note tip" },
+  { label: "Page link", icon: "🔗", action: "page_ref", keywords: "page link embed reference" },
+  { label: "Sheet", icon: "📊", action: "database", keywords: "sheet database table spreadsheet" },
 ];
 
 export function SlashMenu({ editor, onSelect }: SlashMenuProps) {

@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher.js";
 import { PageTree } from "./PageTree.js";
 import { useUI } from "../stores/ui.js";
@@ -17,9 +17,9 @@ export function Sidebar() {
   const themeLabel = `Theme: ${mode}`;
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900">
+    <aside className="flex h-full w-60 flex-col border-r border-neutral-200 bg-neutral-50 dark:border-neutral-600 dark:bg-neutral-900">
       {/* Workspace switcher */}
-      <div className="border-b border-neutral-200 p-2 dark:border-neutral-700">
+      <div className="border-b border-neutral-200 p-2 dark:border-neutral-600">
         <WorkspaceSwitcher />
       </div>
 
@@ -43,8 +43,18 @@ export function Sidebar() {
         {wsId && <PageTree workspaceId={wsId} />}
       </div>
 
+      {/* Trash link */}
+      {wsId && (
+        <Link
+          to={`/app/${wsId}/trash`}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-200 dark:text-neutral-400 dark:hover:bg-neutral-700"
+        >
+          🗑️ Trash
+        </Link>
+      )}
+
       {/* Footer */}
-      <div className="border-t border-neutral-200 p-2 dark:border-neutral-700">
+      <div className="border-t border-neutral-200 p-2 dark:border-neutral-600">
         <div className="flex items-center gap-2 px-2 py-1">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-700 dark:bg-blue-900 dark:text-blue-300">
             {(user?.name || user?.email || "?").charAt(0).toUpperCase()}
