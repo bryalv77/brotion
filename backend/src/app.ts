@@ -35,6 +35,7 @@ import { pageCommentsRouter, commentsRouter } from "./modules/comments/comments.
 import { pageDatabasesRouter, databasesRouter, rowsRouter } from "./modules/databases/databases.routes.js";
 import { exportRouter } from "./modules/export/export.routes.js";
 import { importRouter } from "./modules/import/import.routes.js";
+import { pageTemplatesRouter, workspacePageTemplatesRouter } from "./modules/page-templates/page-templates.routes.js";
 
 /**
  * Express app composition, separated from `server.ts` so it can be imported
@@ -65,6 +66,8 @@ export function createApp(): Express {
   app.use("/api/v1/workspaces/:workspaceId/trash", workspaceTrashRouter);
   app.use("/api/v1/workspaces/:workspaceId/search", searchRouter);
   app.use("/api/v1/workspaces/:workspaceId/import", importRouter);
+  app.use("/api/v1/workspaces/:workspaceId/page-templates", workspacePageTemplatesRouter);
+  app.use("/api/v1/page-templates", pageTemplatesRouter);
   app.use("/api/v1/pages", pagesRouter);
   app.use("/api/v1/pages/:pageId/blocks", pageBlocksRouter);
   app.use("/api/v1/pages/:pageId/permissions", pagePermissionsRouter);

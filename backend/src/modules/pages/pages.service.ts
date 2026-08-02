@@ -252,12 +252,24 @@ export async function duplicatePage(pageId: string, userId: string) {
 
 /** Recompute a page's content_text from its text-bearing blocks (for search). */
 export async function refreshPageContentText(pageId: string): Promise<void> {
-  const blocks = await getPrisma().block.findMany({
+  await refreshPageContentTextTx(getPrisma(), pageId);
+}
+
+/**
+ * Same as `refreshPageContentText`, but runs against a given Prisma client —
+ * pass a `$transaction` callback's `tx` so it sees uncommitted rows created
+ * earlier in the same transaction (the ambient `getPrisma()` client can't).
+ */
+export async function refreshPageContentTextTx(
+  db: Prisma.TransactionClient | ReturnType<typeof getPrisma>,
+  pageId: string,
+): Promise<void> {
+  const blocks = await db.block.findMany({
     where: { page_id: pageId },
     select: { content: true },
   });
   const text = blocks.map((b) => extractText(b.content)).filter(Boolean).join(" ");
-  await getPrisma().page.update({
+  await db.page.update({
     where: { id: pageId },
     data: { content_text: text },
   });
@@ -285,15 +297,25 @@ export function extractText(content: unknown): string {
   const c = content as Record<string, unknown>;
   if (typeof c.text === "string") return c.text; // code blocks
   if (Array.isArray(c.rich_text)) {
-    return c.rich_text
-      .map((r) =>
-        typeof r === "object" && r !== null && "text" in r
-          ? String((r as Record<string, unknown>).text ?? "")
-          : "",
-      )
+    return extractRichText(c.rich_text);
+  }
+  if (Array.isArray(c.cells)) {
+    // table_row: one RichText[] per column.
+    return (c.cells as unknown[])
+      .map((cell) => (Array.isArray(cell) ? extractRichText(cell) : ""))
       .join(" ");
   }
   return "";
+}
+
+function extractRichText(runs: unknown[]): string {
+  return runs
+    .map((r) =>
+      typeof r === "object" && r !== null && "text" in r
+        ? String((r as Record<string, unknown>).text ?? "")
+        : "",
+    )
+    .join(" ");
 }
 
 // Guard import to avoid unused warning when not used directly in this file.

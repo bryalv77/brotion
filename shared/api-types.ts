@@ -501,3 +501,22 @@ export interface UpdateCommentRequest {
   body?: RichText[];
   resolved?: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page templates (built-in Template Gallery)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PageTemplateSummaryDTO {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  tags: string[];
+  previewColor: string;
+}
+
+/** Body for POST /workspaces/:workspaceId/page-templates/:templateId/instantiate. */
+export interface InstantiatePageTemplateRequest {
+  parent_id: string | null;
+}

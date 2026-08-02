@@ -2,11 +2,11 @@ import { useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChildPages } from "../hooks/useChildPages.js";
-import { useCreatePage } from "../hooks/useCreatePage.js";
 import { useMovePage } from "../hooks/useMovePage.js";
 import { deletePage } from "../api/pages.js";
 import { importFile } from "../api/import.js";
 import { useToast } from "../stores/toast.js";
+import { NewPageModal } from "./templates/NewPageModal.js";
 import type { PageSummaryDTO } from "@notion-clone/shared";
 
 // Module-level drag state. We set this on dragstart and read it during
@@ -15,10 +15,11 @@ let draggedId: string | null = null;
 
 export function PageTree({ workspaceId }: { workspaceId: string }) {
   const { data: pages, isLoading } = useChildPages(workspaceId, null);
-  const createPage = useCreatePage(workspaceId);
   const movePage = useMovePage();
   const importInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
+  // undefined = closed; null = new page at workspace root; string = "Add subpage" under that page id.
+  const [newPageParent, setNewPageParent] = useState<string | null | undefined>(undefined);
 
   async function handleImport(file: File | undefined) {
     if (!file) return;
@@ -66,16 +67,7 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
             ↥
           </button>
           <button
-            onClick={() => {
-              createPage.mutate(
-                { title: "" },
-                {
-                  onSuccess: (page) => {
-                    window.location.href = `/app/${workspaceId}/${page.id}`;
-                  },
-                },
-              );
-            }}
+            onClick={() => setNewPageParent(null)}
             className="rounded px-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 dark:hover:bg-neutral-700 dark:hover:text-neutral-300"
             title="New page"
           >
@@ -94,12 +86,25 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
         <div className="px-2 text-sm text-neutral-400 dark:text-neutral-400">Loading…</div>
       )}
       {pages?.map((p) => (
-        <PageTreeNode key={p.id} page={p} workspaceId={workspaceId} movePage={movePage} />
+        <PageTreeNode
+          key={p.id}
+          page={p}
+          workspaceId={workspaceId}
+          movePage={movePage}
+          onNewSubpage={setNewPageParent}
+        />
       ))}
       {pages?.length === 0 && !isLoading && (
         <div className="px-2 py-1 text-sm text-neutral-400 dark:text-neutral-400">
           No pages yet
         </div>
+      )}
+      {newPageParent !== undefined && (
+        <NewPageModal
+          workspaceId={workspaceId}
+          parentId={newPageParent}
+          onClose={() => setNewPageParent(undefined)}
+        />
       )}
     </div>
   );
@@ -109,10 +114,12 @@ function PageTreeNode({
   page,
   workspaceId,
   movePage,
+  onNewSubpage,
 }: {
   page: PageSummaryDTO;
   workspaceId: string;
   movePage: ReturnType<typeof useMovePage>;
+  onNewSubpage: (parentId: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -120,7 +127,6 @@ function PageTreeNode({
   const { pageId: activePageId } = useParams();
   const qc = useQueryClient();
   const { data: children } = useChildPages(expanded ? workspaceId : undefined, page.id);
-  const createSubPage = useCreatePage(workspaceId);
   const isActive = page.id === activePageId;
 
   // ── drag-to-reparent ────────────────────────────────────────────────────
@@ -165,16 +171,7 @@ function PageTreeNode({
 
   function handleCreateSubPage() {
     setMenuOpen(false);
-    createSubPage.mutate(
-      { title: "", parent_id: page.id },
-      {
-        onSuccess: (newPage) => {
-          setExpanded(true);
-          qc.invalidateQueries({ queryKey: ["pages"] });
-          window.location.href = `/app/${workspaceId}/${newPage.id}`;
-        },
-      },
-    );
+    onNewSubpage(page.id);
   }
 
   return (
@@ -246,7 +243,13 @@ function PageTreeNode({
       {expanded && page.has_children && (
         <div className="ml-4 border-l border-neutral-200 pl-1 dark:border-neutral-600">
           {children?.map((c) => (
-            <PageTreeNode key={c.id} page={c} workspaceId={workspaceId} movePage={movePage} />
+            <PageTreeNode
+              key={c.id}
+              page={c}
+              workspaceId={workspaceId}
+              movePage={movePage}
+              onNewSubpage={onNewSubpage}
+            />
           ))}
         </div>
       )}
