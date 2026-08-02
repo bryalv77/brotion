@@ -34,6 +34,7 @@ backend/storage/
 frontend/test-results/
 frontend/playwright-report/
 frontend/playwright/.cache/
+frontend/.auth/
 
 # editor / OS
 .vscode/*

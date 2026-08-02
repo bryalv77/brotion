@@ -52,7 +52,76 @@ export type BlockType =
   | "page_ref";
 export type ShareType = "USER" | "PUBLIC_LINK";
 export type PageAccess = "OWNER" | "EDITOR" | "VIEWER";
-export type PropertyType = "text" | "number" | "select" | "date" | "checkbox" | "url" | "formula";
+export type PropertyType =
+  | "text"
+  | "number"
+  | "select"
+  | "multi_select"
+  | "status"
+  | "date"
+  | "checkbox"
+  | "url"
+  | "formula"
+  | "relation"
+  | "rollup"
+  | "created_time"
+  | "created_by"
+  | "last_edited_time"
+  | "last_edited_by";
+
+export type ViewType = "table" | "list" | "board" | "gallery";
+
+/** Property types that are stored (have editable PropertyValue rows). */
+export type StoredPropertyType = Exclude<
+  PropertyType,
+  "formula" | "rollup" | "created_time" | "created_by" | "last_edited_time" | "last_edited_by"
+>;
+
+// A view config: filters + sorts + grouping + hidden columns.
+export type FilterOp =
+  | "eq"
+  | "ne"
+  | "contains"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "is_empty"
+  | "is_not_empty"
+  | "any_of"
+  | "none_of";
+
+export interface Filter {
+  /** Property NAME the filter applies to. */
+  property: string;
+  op: FilterOp;
+  /** type-appropriate value: string | number | boolean | string[] | null. */
+  value?: string | number | boolean | string[] | null;
+}
+
+export interface Sort {
+  /** Property NAME to sort by. */
+  property: string;
+  direction: "asc" | "desc";
+}
+
+export interface ViewConfig {
+  filters: Filter[];
+  sorts: Sort[];
+  /** Property NAME to group by (Board view; must be a select/status/multi_select). */
+  group_by?: string | null;
+  /** Property NAMES to hide in this view. */
+  hidden?: string[];
+}
+
+export interface DatabaseViewDTO {
+  id: string;
+  database_id: string;
+  name: string;
+  type: ViewType;
+  config: ViewConfig;
+  order: number;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DTOs
@@ -88,6 +157,8 @@ export interface PageDTO extends PageSummaryDTO {
   created_by: string;
   created_at: string; // ISO
   updated_at: string; // ISO
+  /** Present when this page is a row of a database (drives the row property panel). */
+  database_id?: string | null;
 }
 
 export interface BlockDTO {
@@ -149,6 +220,14 @@ export interface PropertyDTO {
   name: string;
   type: PropertyType;
   options?: unknown;
+  /** For `relation` props: the target database id. */
+  relation_database_id?: string | null;
+  /** For `rollup` props: { relation_property_id, target_property_id, aggregation }. */
+  rollup_config?: {
+    relation_property_id: string;
+    target_property_id: string;
+    aggregation: "sum" | "avg" | "min" | "max" | "count" | "show_original";
+  } | null;
   order: number;
 }
 
@@ -166,6 +245,10 @@ export interface DatabaseDTO {
   icon: string | null;
   properties: PropertyDTO[];
   rows: DatabaseRowDTO[];
+  views: DatabaseViewDTO[];
+  /** Templates defined on this database (factory rows for new pages). Optional —
+   * included by `getDatabase`/`createDatabase`; some listings omit it. */
+  templates?: TemplateDTO[];
 }
 
 export interface DatabaseRowDTO {
@@ -176,11 +259,33 @@ export interface DatabaseRowDTO {
   computed?: Record<string, ComputedCell>;
 }
 
+/**
+ * A Template is a factory that produces new database rows (pages) by deep-copy.
+ * Its block body lives on a hidden page (`page_id`, with `is_template=true` on
+ * the server); applying a template copies that body + `default_values` onto a
+ * freshly created row. Once instantiated, the row is fully independent of the
+ * template — there is no later synchronization (factory/prototype semantics).
+ */
+export interface TemplateDTO {
+  id: string;
+  database_id: string;
+  name: string;
+  icon: string | null;
+  /** The hidden page (is_template=true) whose block tree is copied on apply. */
+  page_id: string;
+  /** Initial property values applied on instantiation: { property_id: value }.
+   * Only editable property types are stored (formula/rollup/system excluded). */
+  default_values: Record<string, unknown>;
+  is_default: boolean;
+}
+
 export type ComputedCellStatus = "ok" | "error";
 
 export interface ComputedCell {
   status: ComputedCellStatus;
-  value?: string | number | boolean | null;
+  // Scalars for formula/rollup; arrays/objects for relation summaries and
+  // show_original rollups.
+  value?: string | number | boolean | null | unknown[];
   error?: {
     code:
       | "parse"
@@ -195,6 +300,56 @@ export interface ComputedCell {
 /** Value stored on a `Property` whose `type === "formula"`. */
 export interface FormulaValue {
   formula: string;
+}
+
+/** Select / multi_select / status option (with an optional Tailwind color token). */
+export interface SelectOption {
+  value: string;
+  color?: string;
+}
+
+/** Body for POST /databases/:id/properties/:id/move and /databases/:id/rows/:id/move. */
+export interface ReorderRequest {
+  before_id?: string;
+  after_id?: string;
+}
+
+/** Body for POST /databases/:id/views. */
+export interface CreateViewRequest {
+  name?: string;
+  type?: ViewType;
+  config?: ViewConfig;
+}
+
+/** Body for PATCH /databases/:id/views/:id. */
+export interface UpdateViewRequest {
+  name?: string;
+  type?: ViewType;
+  config?: ViewConfig;
+}
+
+/** Body for POST /databases/:id/rows. Omit `template_id` (or pass null) for an
+ * empty row; pass a template id to instantiate that template's body + defaults.
+ * If no `template_id` is given but the database has a default template, that
+ * template is applied automatically (Notion-style). */
+export interface CreateRowRequest {
+  template_id?: string | null;
+}
+
+/** Body for POST /databases/:id/templates. */
+export interface CreateTemplateRequest {
+  name?: string;
+  icon?: string;
+}
+
+/** Body for PATCH /databases/:id/templates/:id.
+ * `default_values` is a { property_id: value } map; only editable property
+ * types are stored (formula/rollup/system types are rejected server-side). */
+export interface UpdateTemplateRequest {
+  name?: string;
+  icon?: string | null;
+  is_default?: boolean;
+  default_values?: Record<string, unknown>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -292,6 +447,20 @@ export interface UpdatePageRequest {
   title?: string;
   icon?: string;
   cover_url?: string;
+  // parent_id is accepted for reparenting (the move flow), though the canonical
+  // path is POST /pages/:id/move via MovePageRequest, which also enforces the
+  // cycle guard. Kept here so callers can pass it through the typed PATCH path.
+  parent_id?: string | null;
+}
+
+/** Body for POST /pages/:pageId/move — reparents a page (null = workspace root). */
+export interface MovePageRequest {
+  new_parent_id: string | null;
+}
+
+/** Response for GET /pages/:pageId/ancestors — ancestor chain root→leaf (excludes self). */
+export interface BreadcrumbsResponse {
+  breadcrumbs: PageSummaryDTO[];
 }
 
 export interface CreateBlockRequest {

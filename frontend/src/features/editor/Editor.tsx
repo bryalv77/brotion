@@ -48,6 +48,11 @@ export function Editor({ pageId, blocks }: EditorProps) {
   // "blocks arrived from the server" (must refresh) from "the user is typing
   // and the debounced save invalidated the query" (must NOT clobber).
   const lastServerDocRef = useRef<string>("");
+  // Latest server blocks, kept in a ref because useEditor binds onUpdate once
+  // at mount — a plain closure would freeze on the first render's `blocks`
+  // and pass stale data to the autosave reconciler after every refetch.
+  const blocksRef = useRef<BlockDTO[]>(blocks);
+  blocksRef.current = blocks;
 
   const editor = useEditor({
     extensions: [
@@ -79,7 +84,7 @@ export function Editor({ pageId, blocks }: EditorProps) {
     content: blocksToDoc(blocks),
     onUpdate: ({ editor }) => {
       const json = editor.getJSON() as unknown as { type: string; content?: PMNode[] };
-      void syncBlock(json, blocks);
+      void syncBlock(json, blocksRef.current);
     },
   });
 
@@ -87,14 +92,41 @@ export function Editor({ pageId, blocks }: EditorProps) {
   // pageId) change. Without depending on `blocks` here, freshly-imported
   // blocks arriving after the editor mounts would be invisible until the
   // user manually reloaded the page.
+  //
+  // Guards:
+  //   - Never setContent while the editor is focused/being typed in: the
+  //     autosave invalidates ["page", pageId] after every PATCH, which would
+  //     otherwise clobber the user's caret and typed-but-unsaved text on each
+  //     keystroke (the classic "I typed /code and it vanished" loop).
+  //   - Compare against the editor's *current* doc too, so a setContent that
+  //     re-emits the same JSON (or a refetch returning what we already show)
+  //     is a no-op and can't re-trigger onUpdate → save → refetch.
   useEffect(() => {
     if (!editor || !blocks) return;
+    if (editor.isFocused) return;
     const next = JSON.stringify(blocksToDoc(blocks));
-    if (next !== lastServerDocRef.current) {
+    if (next === lastServerDocRef.current) return;
+    const current = JSON.stringify(editor.getJSON());
+    if (next === current) {
       lastServerDocRef.current = next;
-      editor.commands.setContent(JSON.parse(next));
+      return;
     }
+    lastServerDocRef.current = next;
+    editor.commands.setContent(JSON.parse(next));
   }, [pageId, blocks, editor]);
+
+  // Dev/test hook: expose the Tiptap editor on window so e2e tests can
+  // invoke commands directly. ProseMirror's keyboard shortcuts (Mod-b,
+  // Mod-i, etc.) are unreliable in headless Chromium — the modifier gets
+  // intercepted at the document level before reaching the keydown handler.
+  // Production builds never set up the window property.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" || !editor) return;
+    (window as unknown as { __ncEditor?: typeof editor }).__ncEditor = editor;
+    return () => {
+      delete (window as unknown as { __ncEditor?: typeof editor }).__ncEditor;
+    };
+  }, [editor]);
 
   const handleSlashCommand = useCallback(
     (action: string) => {

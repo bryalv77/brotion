@@ -1,4 +1,11 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  API,
+  HEADERS,
+  makePage,
+  makeWorkspace,
+  register,
+} from "./helpers.js";
 
 /**
  * Sheets & formulas — spec 013 acceptance criteria (A–G).
@@ -6,43 +13,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  * Each test sets up a fresh user + workspace and exercises one path through
  * the database + formula engine.
  */
-
-const API = "/api/v1";
-const CSRF = "XMLHttpRequest";
-const HEADERS = { "Content-Type": "application/json", "X-Requested-With": CSRF };
-
-function uniq(p: string): string {
-  return `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
-}
-
-async function register(request: APIRequestContext, email = uniq("u")): Promise<void> {
-  const res = await request.post(`${API}/auth/register`, {
-    data: { email, password: "password123" },
-    headers: HEADERS,
-  });
-  expect(res.status()).toBe(201);
-}
-
-async function makeWorkspace(request: APIRequestContext, name = "WS"): Promise<string> {
-  const res = await request.post(`${API}/workspaces`, {
-    data: { name },
-    headers: HEADERS,
-  });
-  return (await res.json()).data.workspace.id;
-}
-
-async function makePage(
-  request: APIRequestContext,
-  workspaceId: string,
-  body: Record<string, unknown> = {},
-): Promise<string> {
-  const res = await request.post(`${API}/workspaces/${workspaceId}/pages`, {
-    data: body,
-    headers: HEADERS,
-  });
-  expect(res.status()).toBe(201);
-  return (await res.json()).data.page.id;
-}
 
 interface DatabaseResp {
   id: string;
@@ -449,8 +419,17 @@ test.describe("sheets & select", () => {
       headers: HEADERS,
     });
     expect(res.status()).toBe(201);
-    const status = (await res.json()).data.property as { id: string; options: { options: string[] } };
-    expect(status.options.options).toEqual(["Todo", "Doing", "Done"]);
+    // Spec 014: select options are stored as structured {value,color?} objects
+    // (was bare string[] in spec 013; normalized on write).
+    const status = (await res.json()).data.property as {
+      id: string;
+      options: { options: Array<{ value: string; color?: string }> };
+    };
+    expect(status.options.options.map((o) => o.value)).toEqual([
+      "Todo",
+      "Doing",
+      "Done",
+    ]);
 
     const row = await addRow(request, db.id);
     const r = await setCell(request, row.page_id, status.id, "Doing");

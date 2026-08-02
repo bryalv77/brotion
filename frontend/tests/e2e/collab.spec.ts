@@ -1,4 +1,15 @@
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import {
+  API,
+  DEMO_PASSWORD,
+  HEADERS,
+  login,
+  makeBlock,
+  makePage,
+  makeWorkspace,
+  register,
+  uniqueEmail,
+} from "./helpers.js";
 
 /**
  * Collaboration API e2e — spec 004 acceptance criteria for permissions,
@@ -9,47 +20,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  * request context.
  */
 
-const API = "/api/v1";
-const CSRF = "XMLHttpRequest";
-const HEADERS = { "Content-Type": "application/json", "X-Requested-With": CSRF };
-
-function uniq(p: string): string {
-  return `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
-}
-
-async function register(request: APIRequestContext, email = uniq("u")): Promise<string> {
-  const res = await request.post(`${API}/auth/register`, {
-    data: { email, password: "password123" },
-    headers: HEADERS,
-  });
-  expect(res.status()).toBe(201);
-  return (await res.json()).data.user.id;
-}
-
-async function makeWorkspace(request: APIRequestContext): Promise<string> {
-  const res = await request.post(`${API}/workspaces`, { data: { name: "WS" }, headers: HEADERS });
-  return (await res.json()).data.workspace.id;
-}
-
-async function makePage(request: APIRequestContext, workspaceId: string): Promise<string> {
-  const res = await request.post(`${API}/workspaces/${workspaceId}/pages`, {
-    data: { title: "Shared Doc" },
-    headers: HEADERS,
-  });
-  return (await res.json()).data.page.id;
-}
-
-async function makeBlock(request: APIRequestContext, pageId: string): Promise<string> {
-  const res = await request.post(`${API}/pages/${pageId}/blocks`, {
-    data: {
-      type: "paragraph",
-      content: { type: "paragraph", rich_text: [{ kind: "text", text: "hi" }] },
-    },
-    headers: HEADERS,
-  });
-  return (await res.json()).data.block.id;
-}
-
 // ── Permissions & Sharing ────────────────────────────────────────────────────
 
 // Serial: the per-user VIEWER test does a multi-step session switch (register
@@ -59,7 +29,7 @@ test.describe.serial("permissions & sharing", () => {
   test("owner can list permissions (empty initially)", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
 
     const res = await request.get(`${API}/pages/${page}/permissions`);
     expect(res.status()).toBe(200);
@@ -67,16 +37,15 @@ test.describe.serial("permissions & sharing", () => {
   });
 
   test("create per-user VIEWER permission; grantee can read but not write", async ({ request }) => {
-    test.setTimeout(120_000); // 6-step session switch is slow under argon2
     // Step 1: Bob registers first (we capture his id + email), then logs out.
-    const bobEmail = uniq("bob");
+    const bobEmail = uniqueEmail("bob");
     const bobId = await register(request, bobEmail);
     await request.post(`${API}/auth/logout`, { data: {}, headers: HEADERS });
 
     // Step 2: Alice registers, creates workspace + page, grants Bob VIEWER access.
-    await register(request, uniq("alice"));
+    await register(request, uniqueEmail("alice"));
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
 
     const grant = await request.post(`${API}/pages/${page}/permissions`, {
       data: { user_id: bobId, share_type: "USER", access: "VIEWER" },
@@ -86,11 +55,7 @@ test.describe.serial("permissions & sharing", () => {
 
     // Step 3: Alice logs out, Bob logs in.
     await request.post(`${API}/auth/logout`, { data: {}, headers: HEADERS });
-    const login = await request.post(`${API}/auth/login`, {
-      data: { email: bobEmail, password: "password123" },
-      headers: HEADERS,
-    });
-    expect(login.status()).toBe(200);
+    await login(request, bobEmail, DEMO_PASSWORD);
 
     // Step 4: Bob can READ the page (200) but not PATCH it (403).
     const read = await request.get(`${API}/pages/${page}`);
@@ -106,7 +71,7 @@ test.describe.serial("permissions & sharing", () => {
   test("create public link; unauthenticated GET /shared/:token returns page", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
 
     // Create public link.
     const link = await request.post(`${API}/pages/${page}/permissions`, {
@@ -132,7 +97,7 @@ test.describe.serial("permissions & sharing", () => {
   test("delete a permission → 204", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
 
     const link = await request.post(`${API}/pages/${page}/permissions`, {
       data: { share_type: "PUBLIC_LINK", access: "VIEWER" },
@@ -157,7 +122,7 @@ test.describe("comments", () => {
   test("create + list comments on a page", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
     const block = await makeBlock(request, page);
 
     const create = await request.post(`${API}/pages/${page}/comments`, {
@@ -181,7 +146,7 @@ test.describe("comments", () => {
   test("patch a comment (resolve)", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
     const block = await makeBlock(request, page);
 
     const create = await request.post(`${API}/pages/${page}/comments`, {
@@ -201,7 +166,7 @@ test.describe("comments", () => {
   test("delete a comment", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
-    const page = await makePage(request, ws);
+    const page = await makePage(request, ws, { title: "Shared Doc" });
     const block = await makeBlock(request, page);
 
     const create = await request.post(`${API}/pages/${page}/comments`, {

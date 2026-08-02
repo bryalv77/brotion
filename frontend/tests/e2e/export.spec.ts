@@ -1,41 +1,22 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  API,
+  makeBlock,
+  makePage,
+  makeWorkspace,
+  register,
+  uniqueEmail,
+} from "./helpers.js";
 
 /**
  * Task 013 e2e: page export (Markdown + PDF).
  */
 
-const API = "/api/v1";
-const CSRF = "XMLHttpRequest";
-const HEADERS = { "Content-Type": "application/json", "X-Requested-With": CSRF };
-
 async function loginAndCreatePage(request: APIRequestContext): Promise<string> {
-  // Register a unique user so there's no seed collision.
-  const email = `export-${Date.now()}@e2e.test`;
-  await request.post(`${API}/auth/register`, {
-    data: { email, password: "password123" },
-    headers: HEADERS,
-  });
-  const wsRes = await request.post(`${API}/workspaces`, {
-    data: { name: "WS" },
-    headers: HEADERS,
-  });
-  const wsId = (await wsRes.json()).data.workspace.id;
-  const pageRes = await request.post(`${API}/workspaces/${wsId}/pages`, {
-    data: { title: "Export Test" },
-    headers: HEADERS,
-  });
-  const pageId = (await pageRes.json()).data.page.id;
-  // Add a paragraph block.
-  await request.post(`${API}/pages/${pageId}/blocks`, {
-    data: {
-      type: "paragraph",
-      content: {
-        type: "paragraph",
-        rich_text: [{ kind: "text", text: "Hello export world" }],
-      },
-    },
-    headers: HEADERS,
-  });
+  await register(request, uniqueEmail("export"));
+  const wsId = await makeWorkspace(request);
+  const pageId = await makePage(request, wsId, { title: "Export Test" });
+  await makeBlock(request, pageId, "paragraph", "Hello export world");
   return pageId;
 }
 

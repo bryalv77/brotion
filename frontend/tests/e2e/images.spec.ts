@@ -1,4 +1,13 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  API,
+  CSRF_HEADER,
+  HEADERS,
+  makePage,
+  makeWorkspace,
+  register,
+  uniqueEmail,
+} from "./helpers.js";
 
 /**
  * Task 014 e2e: image uploads (cover + in-content image blocks).
@@ -7,29 +16,10 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  * timing), so these cover the API contract deterministically.
  */
 
-const API = "/api/v1";
-const CSRF = "XMLHttpRequest";
-const HEADERS = { "Content-Type": "application/json", "X-Requested-With": CSRF };
-
-function uniq(p: string): string {
-  return `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
-}
-
 async function registerAndCreatePage(request: APIRequestContext): Promise<string> {
-  await request.post(`${API}/auth/register`, {
-    data: { email: uniq("img"), password: "password123" },
-    headers: HEADERS,
-  });
-  const wsRes = await request.post(`${API}/workspaces`, {
-    data: { name: "WS" },
-    headers: HEADERS,
-  });
-  const wsId = (await wsRes.json()).data.workspace.id;
-  const pageRes = await request.post(`${API}/workspaces/${wsId}/pages`, {
-    data: { title: "Image Test" },
-    headers: HEADERS,
-  });
-  return (await pageRes.json()).data.page.id;
+  await register(request, uniqueEmail("img"));
+  const wsId = await makeWorkspace(request);
+  return makePage(request, wsId, { title: "Image Test" });
 }
 
 // 1x1 transparent PNG.
@@ -47,7 +37,7 @@ test.describe("image uploads", () => {
         file: { name: "tiny.png", mimeType: "image/png", buffer: TINY_PNG },
         page_id: pageId,
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     expect(res.status()).toBe(201);
     const attachment = (await res.json()).data.attachment;
@@ -69,7 +59,7 @@ test.describe("image uploads", () => {
         file: { name: "cover.png", mimeType: "image/png", buffer: TINY_PNG },
         page_id: pageId,
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     const imgUrl = (await uploadRes.json()).data.attachment.url;
 
@@ -91,7 +81,7 @@ test.describe("image uploads", () => {
         file: { name: "block.png", mimeType: "image/png", buffer: TINY_PNG },
         page_id: pageId,
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     const imgUrl = (await uploadRes.json()).data.attachment.url;
 

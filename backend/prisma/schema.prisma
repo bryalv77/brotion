@@ -33,10 +33,18 @@ enum PropertyType {
   text
   number
   select
+  multi_select
+  status
   date
   checkbox
   url
   formula
+  relation
+  rollup
+  created_time
+  created_by
+  last_edited_time
+  last_edited_by
 }
 
 enum BlockType {
@@ -55,6 +63,13 @@ enum BlockType {
   table
   table_row
   page_ref
+}
+
+enum ViewType {
+  table
+  list
+  board
+  gallery
 }
 
 model User {
@@ -133,10 +148,17 @@ model Page {
   is_deleted      Boolean   @default(false)
   deleted_at      DateTime?
   deleted_by      String?
+  // True for the hidden Page that backs a Database Template: it is never shown
+  // in the sidebar tree, search results, or breadcrumbs. Excluded by the
+  // `is_template: false` filter in those read paths.
+  is_template     Boolean   @default(false)
   created_by      String
   last_updated_by String?
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
+  // Manual ordering of database rows. Null for non-row pages (which use
+  // created_at); row pages set this on creation and on drag-reorder.
+  row_order       Float?
 
   workspace       Workspace        @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
   parent          Page?            @relation("PageTree", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -152,6 +174,10 @@ model Page {
 
   // This page belongs to a Database as a row.
   database_id String?
+
+  // The Template (if any) whose block body this hidden page holds. Null for
+  // every normal page; 1:1 with Template.page_id.
+  template_body Template? @relation("TemplateBodyPage")
 
   @@index([workspace_id])
   @@index([parent_id])
@@ -243,28 +269,56 @@ model Database {
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
-  workspace  Workspace  @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
-  page       Page       @relation("DatabaseHostPage", fields: [page_id], references: [id], onDelete: Cascade)
-  rows       Page[]     @relation("PageDatabaseRow")
-  properties Property[]
+  workspace        Workspace      @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+  page             Page           @relation("DatabaseHostPage", fields: [page_id], references: [id], onDelete: Cascade)
+  rows             Page[]         @relation("PageDatabaseRow")
+  properties       Property[]
+  views            DatabaseView[]
+  templates        Template[]
+  // Relation properties in other (or this) databases that point here.
+  relation_sources Property[]     @relation("RelationTarget")
 
   @@index([page_id])
   @@map("databases")
 }
 
-model Property {
-  id          String       @id @default(cuid())
+model DatabaseView {
+  id          String   @id @default(cuid())
   database_id String
-  name        String
-  type        PropertyType
-  options     Json?
-  order       Int          @default(0)
-  created_at  DateTime     @default(now())
+  name        String   @default("Table")
+  type        ViewType
+  // { filters: Filter[], sorts: Sort[], group_by?: string, hidden?: string[] }
+  config      Json     @default("{}")
+  order       Int      @default(0)
+  created_at  DateTime @default(now())
 
-  database Database        @relation(fields: [database_id], references: [id], onDelete: Cascade)
-  values   PropertyValue[]
+  database Database @relation(fields: [database_id], references: [id], onDelete: Cascade)
 
   @@index([database_id])
+  @@map("database_views")
+}
+
+model Property {
+  id                   String       @id @default(cuid())
+  database_id          String
+  name                 String
+  type                 PropertyType
+  options              Json?
+  // For `relation` properties: the target database id (self-relation across
+  // databases in the same workspace). Null for all other types.
+  relation_database_id String?
+  // For `rollup` properties: { relation_property_id, target_property_id, aggregation }.
+  rollup_config        Json?
+  order                Int          @default(0)
+  created_at           DateTime     @default(now())
+
+  database    Database        @relation(fields: [database_id], references: [id], onDelete: Cascade)
+  values      PropertyValue[]
+  // Self-reference: a relation property points at another database.
+  relation_db Database?       @relation("RelationTarget", fields: [relation_database_id], references: [id], onDelete: SetNull)
+
+  @@index([database_id])
+  @@index([relation_database_id])
   @@map("properties")
 }
 
@@ -282,4 +336,30 @@ model PropertyValue {
   @@unique([page_id, property_id])
   @@index([page_id])
   @@map("property_values")
+}
+
+// A Template is a factory that produces new database rows (Pages) by deep-copy.
+// Its block body lives on a hidden Page (is_template=true); applying a template
+// copies that body + the default_values onto a freshly created row. Once
+// instantiated, the row is fully independent of the template (no sync).
+model Template {
+  id             String   @id @default(cuid())
+  database_id    String
+  name           String   @default("")
+  icon           String?
+  // The hidden Page (is_template=true) that stores the template's block tree.
+  page_id        String   @unique
+  // Initial property values applied on instantiation: { property_id: value }.
+  // Only editable property types are stored (formula/rollup/system are skipped).
+  default_values Json     @default("{}")
+  is_default     Boolean  @default(false)
+  created_by     String
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  database Database @relation(fields: [database_id], references: [id], onDelete: Cascade)
+  page     Page     @relation("TemplateBodyPage", fields: [page_id], references: [id], onDelete: Cascade)
+
+  @@index([database_id])
+  @@map("templates")
 }

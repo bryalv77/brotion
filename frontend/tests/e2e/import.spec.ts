@@ -1,28 +1,20 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  API,
+  CSRF_HEADER,
+  makeWorkspace,
+  register,
+  uniqueEmail,
+} from "./helpers.js";
 
 /**
  * Task: Import e2e — verify file import creates pages with correct blocks.
  * Tests MD (full parser), TXT (simple parser), and XLSX (table parser).
  */
 
-const API = "/api/v1";
-const CSRF = "XMLHttpRequest";
-const HEADERS = { "Content-Type": "application/json", "X-Requested-With": CSRF };
-
-function uniq(p: string): string {
-  return `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
-}
-
 async function setup(request: APIRequestContext): Promise<string> {
-  await request.post(`${API}/auth/register`, {
-    data: { email: uniq("import"), password: "password123" },
-    headers: HEADERS,
-  });
-  const wsRes = await request.post(`${API}/workspaces`, {
-    data: { name: "WS" },
-    headers: HEADERS,
-  });
-  return (await wsRes.json()).data.workspace.id;
+  await register(request, uniqueEmail("import"));
+  return makeWorkspace(request);
 }
 
 test.describe("import", () => {
@@ -35,7 +27,7 @@ test.describe("import", () => {
       multipart: {
         file: { name: "test.md", mimeType: "text/markdown", buffer: Buffer.from(mdContent) },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
 
     expect(res.status()).toBe(201);
@@ -63,7 +55,7 @@ test.describe("import", () => {
       multipart: {
         file: { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from(txtContent) },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
 
     expect(res.status()).toBe(201);
@@ -83,7 +75,7 @@ test.describe("import", () => {
       multipart: {
         file: { name: "file.exe", mimeType: "application/octet-stream", buffer: Buffer.from("MZ") },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
 
     expect(res.status()).toBe(400);
@@ -106,7 +98,7 @@ test.describe("import", () => {
       multipart: {
         file: { name: "attach-me.md", mimeType: "text/markdown", buffer: Buffer.from(mdContent) },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
 
     expect(res.status()).toBe(201);
@@ -167,7 +159,7 @@ test.describe("import", () => {
       multipart: {
         file: { name: "marks.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: docx },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     expect(res.status()).toBe(201);
     const page = (await res.json()).data.page;

@@ -10,6 +10,8 @@ import {
   deletePageHandler,
   restorePageHandler,
   duplicatePageHandler,
+  movePageHandler,
+  getAncestorsHandler,
   listTrashHandler,
 } from "./pages.controller.js";
 
@@ -33,3 +35,5 @@ pagesRouter.patch("/:pageId", csrfGuard, asyncHandler(updatePageHandler));
 pagesRouter.delete("/:pageId", csrfGuard, asyncHandler(deletePageHandler));
 pagesRouter.post("/:pageId/restore", csrfGuard, asyncHandler(restorePageHandler));
 pagesRouter.post("/:pageId/duplicate", csrfGuard, asyncHandler(duplicatePageHandler));
+pagesRouter.post("/:pageId/move", csrfGuard, asyncHandler(movePageHandler));
+pagesRouter.get("/:pageId/ancestors", asyncHandler(getAncestorsHandler));

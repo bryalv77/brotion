@@ -71,6 +71,12 @@ block content), and file uploads (images / attachments). All endpoints from
 - [ ] Patch a block's content; change persists.
 - [ ] Delete a block cascades its children.
 - [ ] Reorder that would create a cycle (move a block under its descendant) → 422.
+- [ ] Move a page under another (or to root) via POST /pages/:id/move → parent
+      updates; both old and new children lists reflect it.
+- [ ] Move that would create a cycle (or self-parent / cross-workspace / deleted
+      parent) → 422.
+- [ ] GET /pages/:id/ancestors returns the root→leaf ancestor chain (empty for a
+      root page).
 - [ ] Search by a word in a page title/content returns that page with a snippet.
 - [ ] Upload an image file → 201 with a url; `GET /files/:key` serves bytes.
 - [ ] Oversized / wrong-type upload → 413 / 415.

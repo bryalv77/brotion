@@ -9,7 +9,7 @@ import {
   renormalize,
   type Anchor,
 } from "./order.js";
-import { badRequest, notFound } from "../../utils/errors.js";
+import { badRequest, notFound, unprocessableEntity } from "../../utils/errors.js";
 
 /**
  * Block business rules: creation (with computed order), update, delete
@@ -175,10 +175,14 @@ export async function reorderBlock(
   // Cycle guard: new parent must not be the block itself or one of its descendants.
   if (newParentId) {
     if (newParentId === block.id) {
-      throw badRequest("A block cannot be its own parent.", { code: "CYCLE" });
+      throw unprocessableEntity("A block cannot be its own parent.", {
+        code: "CYCLE",
+      });
     }
     if (await isDescendant(block.id, newParentId)) {
-      throw badRequest("Reparenting would create a cycle.", { code: "CYCLE" });
+      throw unprocessableEntity("Reparenting would create a cycle.", {
+        code: "CYCLE",
+      });
     }
     // Validate the new parent belongs to this page.
     const parent = await getPrisma().block.findUnique({

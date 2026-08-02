@@ -1,11 +1,12 @@
 import type { Prisma } from "@prisma/client";
+import type { PageSummaryDTO } from "@notion-clone/shared";
 import { getPrisma } from "../../prisma/client.js";
 import {
   assertWorkspaceMember,
   getAccessiblePage,
 } from "../auth/permissions.service.js";
 import { toPageDTO, toPageSummaryDTO } from "./pages.dto.js";
-import { badRequest, notFound } from "../../utils/errors.js";
+import { badRequest, notFound, unprocessableEntity } from "../../utils/errors.js";
 
 /**
  * Page business rules: tree navigation, trash/restore, duplicate, and the
@@ -24,6 +25,7 @@ export async function listChildPages(
       workspace_id: workspaceId,
       parent_id: parentId ?? null,
       is_deleted: false,
+      is_template: false,
     },
     orderBy: [{ title: "asc" }, { created_at: "asc" }],
   });
@@ -34,6 +36,7 @@ export async function listChildPages(
       workspace_id: workspaceId,
       parent_id: { in: rows.map((r) => r.id) },
       is_deleted: false,
+      is_template: false,
     },
     _count: { _all: true },
   });
@@ -52,6 +55,7 @@ export async function listTrashedPages(workspaceId: string, userId: string) {
     where: {
       workspace_id: workspaceId,
       is_deleted: true,
+      is_template: false,
     },
     orderBy: [{ deleted_at: "desc" }],
   });
@@ -121,6 +125,29 @@ export async function updatePage(
     where: { id: page.id },
     data,
   });
+
+  // If this page is a database row and its title changed, mirror the title into
+  // the row's primary "Name" text cell (rows ARE pages — keep them in sync).
+  if (input.title !== undefined && updated.database_id) {
+    const nameProp = await getPrisma().property.findFirst({
+      where: { database_id: updated.database_id, name: "Name", type: "text" },
+      select: { id: true },
+    });
+    if (nameProp) {
+      await getPrisma().propertyValue.upsert({
+        where: {
+          page_id_property_id: { page_id: pageId, property_id: nameProp.id },
+        },
+        update: { value: input.title as never },
+        create: {
+          page_id: pageId,
+          property_id: nameProp.id,
+          value: input.title as never,
+        },
+      });
+    }
+  }
+
   return toPageDTO(updated);
 }
 
@@ -271,3 +298,140 @@ export function extractText(content: unknown): string {
 
 // Guard import to avoid unused warning when not used directly in this file.
 void notFound;
+
+/**
+ * Is `candidateParentId` a descendant of `pageId`? Walks the candidate's
+ * `parent_id` chain upward; if we hit `pageId`, reparenting under the
+ * candidate would form a cycle. (Mirrors blocks' isDescendant.)
+ */
+export async function isPageDescendant(
+  pageId: string,
+  candidateParentId: string,
+): Promise<boolean> {
+  let current: string | null = candidateParentId;
+  const guard = new Set<string>();
+  while (current !== null) {
+    const id: string = current;
+    if (id === pageId) return true;
+    if (guard.has(id)) return false; // safety against a pre-existing cycle
+    guard.add(id);
+    const row = await getPrisma().page.findUnique({
+      where: { id },
+      select: { parent_id: true },
+    });
+    current = row?.parent_id ?? null;
+  }
+  return false;
+}
+
+/**
+ * Move (reparent) a page. `new_parent_id === null` moves it to the workspace
+ * root. Children of the moved page come along for the ride automatically
+ * (containment is via parent_id, so no recursive rewrite is needed).
+ *
+ * Guards: same workspace + not-deleted parent, no self-parent, no cycle.
+ */
+export async function movePage(
+  pageId: string,
+  userId: string,
+  input: { new_parent_id: string | null },
+) {
+  const { page } = await getAccessiblePage(pageId, userId, {
+    minAccess: "EDITOR",
+  });
+
+  const newParentId = input.new_parent_id;
+
+  // No-op: already under this parent.
+  if (newParentId === page.parent_id) {
+    return toPageDTO(page);
+  }
+
+  if (newParentId !== null) {
+    const parent = await getPrisma().page.findUnique({
+      where: { id: newParentId },
+      select: { workspace_id: true, is_deleted: true },
+    });
+    if (!parent) throw notFound("Parent page not found.");
+    if (parent.workspace_id !== page.workspace_id) {
+      throw unprocessableEntity(
+        "Cannot move a page to another workspace.",
+        { code: "CROSS_WORKSPACE" },
+      );
+    }
+    if (parent.is_deleted) {
+      throw unprocessableEntity("Cannot move under a deleted page.", {
+        code: "PARENT_DELETED",
+      });
+    }
+    if (newParentId === page.id) {
+      throw unprocessableEntity("A page cannot be its own parent.", {
+        code: "CYCLE",
+      });
+    }
+    if (await isPageDescendant(page.id, newParentId)) {
+      throw unprocessableEntity("Reparenting would create a cycle.", {
+        code: "CYCLE",
+      });
+    }
+  }
+
+  await assertWorkspaceMember(page.workspace_id, userId);
+
+  const updated = await getPrisma().page.update({
+    where: { id: page.id },
+    data: {
+      parent_id: newParentId,
+      last_updated_by: userId,
+    },
+  });
+  return toPageDTO(updated);
+}
+
+/**
+ * Ancestors of a page (root→leaf, excluding self). Used for breadcrumbs.
+ * Walks parent_id upward with a visited-set guard against pre-existing cycles.
+ */
+export async function getPageAncestors(
+  pageId: string,
+  userId: string,
+): Promise<PageSummaryDTO[]> {
+  // Access check first — non-members get 403/404, never a chain.
+  await getAccessiblePage(pageId, userId);
+
+  const chain: Array<{
+    id: string;
+    title: string;
+    icon: string | null;
+    parent_id: string | null;
+  }> = [];
+  const guard = new Set<string>();
+  let current: string | null = pageId;
+  while (current !== null) {
+    const id: string = current;
+    if (guard.has(id)) break; // safety against a pre-existing cycle
+    guard.add(id);
+    const row = await getPrisma().page.findUnique({
+      where: { id },
+      select: { id: true, title: true, icon: true, parent_id: true, is_template: true },
+    });
+    if (!row) break;
+    // A hidden template body page (and anything above it) must never surface in
+    // breadcrumbs — stop the walk here.
+    if (row.is_template) break;
+    // Skip the starting page itself — breadcrumbs are ancestors only.
+    if (row.id !== pageId) chain.push(row);
+    current = row.parent_id;
+  }
+  // chain is nearest-ancestor-first; breadcrumbs read root→leaf.
+  chain.reverse();
+  // Build PageSummaryDTO inline: we only selected the 4 breadcrumb fields, and
+  // has_children isn't surfaced in the breadcrumb UI.
+  return chain.map((p) => ({
+    id: p.id,
+    title: p.title,
+    icon: p.icon,
+    parent_id: p.parent_id,
+    has_children: false,
+  }));
+}

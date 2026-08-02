@@ -52,6 +52,24 @@ export function restorePage(pageId: string): Promise<PageDTO> {
   }).then((r) => r.page);
 }
 
+/** Reparent a page. `newParentId === null` moves it to the workspace root. */
+export function movePage(
+  pageId: string,
+  newParentId: string | null,
+): Promise<PageDTO> {
+  return request<{ page: PageDTO }>(`pages/${pageId}/move`, {
+    method: "POST",
+    body: JSON.stringify({ new_parent_id: newParentId }),
+  }).then((r) => r.page);
+}
+
+/** Ancestor chain (root→leaf, excluding the page itself) for breadcrumbs. */
+export function getPageBreadcrumbs(pageId: string): Promise<PageSummaryDTO[]> {
+  return request<{ breadcrumbs: PageSummaryDTO[] }>(
+    `pages/${pageId}/ancestors`,
+  ).then((r) => r.breadcrumbs);
+}
+
 export function permanentDeletePage(pageId: string): Promise<void> {
   return request<void>(`pages/${pageId}?permanent=true`, { method: "DELETE" });
 }

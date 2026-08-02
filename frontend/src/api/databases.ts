@@ -2,8 +2,12 @@ import { request } from "./client.js";
 import type {
   ComputedCell,
   DatabaseDTO,
+  DatabaseViewDTO,
   PropertyDTO,
   PropertyType,
+  TemplateDTO,
+  ViewConfig,
+  ViewType,
 } from "@notion-clone/shared";
 
 export function createDatabase(
@@ -16,8 +20,11 @@ export function createDatabase(
   }).then((r) => r.database);
 }
 
-export function getDatabase(id: string): Promise<DatabaseDTO> {
-  return request<{ database: DatabaseDTO }>(`databases/${id}`).then((r) => r.database);
+export function getDatabase(id: string, viewId?: string): Promise<DatabaseDTO> {
+  const qs = viewId ? `?view_id=${viewId}` : "";
+  return request<{ database: DatabaseDTO }>(`databases/${id}${qs}`).then(
+    (r) => r.database,
+  );
 }
 
 export function listPageDatabases(pageId: string): Promise<DatabaseDTO[]> {
@@ -51,11 +58,24 @@ export function updateProperty(
   ).then((r) => r.property);
 }
 
-export function addRow(databaseId: string): Promise<{ page_id: string; title: string }> {
+export function deleteProperty(databaseId: string, propertyId: string): Promise<void> {
+  return request<void>(`databases/${databaseId}/properties/${propertyId}`, {
+    method: "DELETE",
+  });
+}
+
+export function addRow(
+  databaseId: string,
+  body?: { template_id?: string | null },
+): Promise<{ page_id: string; title: string }> {
   return request<{ row: { page_id: string; title: string } }>(
     `databases/${databaseId}/rows`,
-    { method: "POST", body: "{}" },
+    { method: "POST", body: JSON.stringify(body ?? {}) },
   ).then((r) => r.row);
+}
+
+export function deleteRow(rowPageId: string): Promise<void> {
+  return request<void>(`rows/${rowPageId}`, { method: "DELETE" });
 }
 
 export function updatePropertyValue(
@@ -71,3 +91,73 @@ export function updatePropertyValue(
     },
   );
 }
+
+// ── Views ──────────────────────────────────────────────────────────────────
+
+export function createView(
+  databaseId: string,
+  body: { name?: string; type?: ViewType; config?: ViewConfig },
+): Promise<DatabaseViewDTO> {
+  return request<{ view: DatabaseViewDTO }>(`databases/${databaseId}/views`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then((r) => r.view);
+}
+
+export function updateView(
+  databaseId: string,
+  viewId: string,
+  body: { name?: string; type?: ViewType; config?: ViewConfig },
+): Promise<DatabaseViewDTO> {
+  return request<{ view: DatabaseViewDTO }>(
+    `databases/${databaseId}/views/${viewId}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  ).then((r) => r.view);
+}
+
+export function deleteView(databaseId: string, viewId: string): Promise<void> {
+  return request<void>(`databases/${databaseId}/views/${viewId}`, {
+    method: "DELETE",
+  });
+}
+
+// ── Templates ──────────────────────────────────────────────────────────────
+
+export function listTemplates(databaseId: string): Promise<TemplateDTO[]> {
+  return request<{ templates: TemplateDTO[] }>(
+    `databases/${databaseId}/templates`,
+  ).then((r) => r.templates);
+}
+
+export function createTemplate(
+  databaseId: string,
+  body: { name?: string; icon?: string },
+): Promise<TemplateDTO> {
+  return request<{ template: TemplateDTO }>(`databases/${databaseId}/templates`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then((r) => r.template);
+}
+
+export function updateTemplate(
+  databaseId: string,
+  templateId: string,
+  body: {
+    name?: string;
+    icon?: string | null;
+    is_default?: boolean;
+    default_values?: Record<string, unknown>;
+  },
+): Promise<TemplateDTO> {
+  return request<{ template: TemplateDTO }>(
+    `databases/${databaseId}/templates/${templateId}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+  ).then((r) => r.template);
+}
+
+export function deleteTemplate(databaseId: string, templateId: string): Promise<void> {
+  return request<void>(`databases/${databaseId}/templates/${templateId}`, {
+    method: "DELETE",
+  });
+}
+

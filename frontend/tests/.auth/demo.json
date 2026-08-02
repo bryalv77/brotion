@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "nc_access",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXNicnF3MTEwMDAwNHdoeG1ncnh2bGRwIiwiaWF0IjoxNzg1NjczMjQ3LCJleHAiOjE3ODU2NzQxNDd9.HhPdcDDsPfgvIY_UdoB4m_I8LG6Y-sYawn0hMytiTpQ",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1785674147,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "nc_refresh",
+      "value": "eLjlkA5JUvGzGbQxvGawlZ5yUjH6mIP327mYpZfHugo",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1788265247,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

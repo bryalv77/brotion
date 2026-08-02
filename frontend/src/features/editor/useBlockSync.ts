@@ -52,15 +52,25 @@ export function useBlockSync(pageId: string) {
           );
         }
 
-        // 2) PATCH existing blocks whose content changed.
+        // 2) PATCH existing blocks whose content OR type changed.
         const overlap = Math.min(existing.length, docBlocks.length);
         for (let i = 0; i < overlap; i++) {
           const oldBlock = existing[i];
-          const newContent = docBlocks[i].content;
-          const oldContent = oldBlock.content as unknown as Record<string, unknown>;
-          if (JSON.stringify(oldContent) !== JSON.stringify(newContent)) {
+          const newBlock = docBlocks[i];
+          const contentChanged =
+            JSON.stringify(oldBlock.content) !== JSON.stringify(newBlock.content);
+          const typeChanged = oldBlock.type !== newBlock.type;
+          if (contentChanged || typeChanged) {
             promises.push(
-              updateBlock(oldBlock.id, { content: newContent }).catch(() => {
+              updateBlock(oldBlock.id, {
+                // Keep the row's type in sync with the node the user is
+                // editing. Without this, converting a paragraph to /code or
+                // /callout leaves the row typed "paragraph" with mismatched
+                // content; the next refetch then renders it as an empty
+                // paragraph and the typed text appears to "vanish".
+                ...(typeChanged ? { type: newBlock.type } : {}),
+                content: newBlock.content,
+              }).catch(() => {
                 /* swallow */
               }),
             );

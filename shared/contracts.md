@@ -110,6 +110,17 @@ SearchResultDTO    = { page_id, title, snippet, rank }
 ### POST /pages/:pageId/duplicate
 - 200: `{ data: { page: PageDTO } }` (deep-copy page + blocks)
 
+### POST /pages/:pageId/move
+- Body: `{ new_parent_id }` (`null` moves the page to the workspace root)
+- 200: `{ data: { page: PageDTO } }` (parent_id updated; all descendants move with it)
+- 403: requires EDITOR access on the moved page
+- 422: would create a cycle, self-parent, cross-workspace target, or deleted parent
+  (error `details.code` is one of `CYCLE` / `CROSS_WORKSPACE` / `PARENT_DELETED`)
+
+### GET /pages/:pageId/ancestors
+- 200: `{ data: { breadcrumbs: PageSummaryDTO[] } }` (ancestor chain, root→leaf, excludes self)
+- 403: no permission
+
 ## Blocks — Task 3 (core)
 ### POST /pages/:pageId/blocks
 - Body: `{ type, content, parent_block_id?, order?, before_id?, after_id? }`
@@ -183,3 +194,124 @@ SearchResultDTO    = { page_id, title, snippet, rank }
 - Server→client: `block:updated`, `block:created`, `block:deleted`, `presence:update`.
 - Client→server: `block:typing`.
 - If not implemented, ship single-user and note the gap in the task report.
+
+## Databases (Tasks 012/013 + v2)
+A database is a set of structured pages (rows) sharing a schema (properties), each
+row being a full page. `DatabaseDTO` carries `properties`, `views`, and `rows`
+(with computed formula/rollup cells). Property types: text, number, select,
+multi_select, status, date, checkbox, url, formula, relation, rollup,
+created_time, created_by, last_edited_time, last_edited_by.
+
+### GET /pages/:pageId/databases
+- 200: `{ data: { databases: DatabaseDTO[] } }` (metadata only: properties + views, no rows)
+
+### POST /pages/:pageId/databases
+- Body: `{ title?, icon? }`
+- 201: `{ data: { database: DatabaseDTO } }` (creates a default "Name" text column + a default Table view)
+
+### GET /databases/:databaseId
+- Query: `?view_id=` (when set, rows are filtered/sorted/hidden per that view's config)
+- 200: `{ data: { database: DatabaseDTO } }` (rows ordered by `row_order`, formula/rollup cells computed)
+- 403: no permission
+
+### PATCH /databases/:databaseId
+- Body: `{ title?, icon? }`
+- 200: `{ data: { database: DatabaseDTO } }`
+
+### DELETE /databases/:databaseId
+- 204: no content (OWNER only; properties/values/views cascade; rows have database_id cleared)
+
+### POST /databases/:databaseId/properties
+- Body: `{ name, type, options?, relation_database_id?, rollup_config? }`
+  - formula: `options: { formula }` (cycle-checked at write time)
+  - select/multi_select/status: `options: { options: SelectOption[] }`
+  - relation: `relation_database_id` (target db, same workspace)
+  - rollup: `rollup_config: { relation_property_id, target_property_id, aggregation }`
+- 201: `{ data: { property: PropertyDTO } }`
+- 400: `FORMULA_CYCLE` if the formula would create a circular dependency
+
+### PATCH /databases/:databaseId/properties/:propertyId
+- Body: `{ name?, options?, rollup_config? }`
+- 200: `{ data: { property: PropertyDTO } }`
+
+### DELETE /databases/:databaseId/properties/:propertyId
+- 204: no content (cascades the property's values; rejects if it's the last property)
+
+### POST /databases/:databaseId/properties/:propertyId/move
+- Body: `{ before_id?, after_id? }` (anchors among siblings; re-packs order 0..n)
+- 200: `{ data: { properties: PropertyDTO[] } }` (full reordered set)
+
+### POST /databases/:databaseId/rows
+- 201: `{ data: { row: { page_id, title } } }` (creates a row Page; row_order = max+1)
+
+### DELETE /rows/:rowPageId
+- 204: no content (soft-deletes the backing page)
+
+### POST /databases/:databaseId/rows/:rowPageId/move
+- Body: `{ before_id?, after_id? }` (fractional-index reorder of rows)
+- 200: no content
+
+### PATCH /rows/:rowPageId/properties/:propertyId
+- Body: `{ value }` (type-appropriate scalar/array)
+- 200: `{ data: { value, computed } }` (re-evaluated formula cells for the row)
+- 400: `FORMULA_NOT_EDITABLE` / `SYSTEM_NOT_EDITABLE`
+
+### Views
+#### POST /databases/:databaseId/views
+- Body: `{ name?, type?, config? }` (defaults: name "Table", type "table", config {})
+- 201: `{ data: { view: DatabaseViewDTO } }`
+
+#### PATCH /databases/:databaseId/views/:viewId
+- Body: `{ name?, type?, config? }`
+- 200: `{ data: { view: DatabaseViewDTO } }`
+
+#### DELETE /databases/:databaseId/views/:viewId
+- 204: no content (rejects if it's the last view)
+
+#### POST /databases/:databaseId/views/:viewId/move
+- Body: `{ before_id?, after_id? }`
+- 200: no content
+
+### Templates
+Templates are factories for new rows: applying one deep-copies its block body
+(onto a freshly created row page) + seeds its `default_values`. After creation
+the row is fully independent — editing the row never touches the template, and
+editing the template never touches existing rows. No synchronization.
+
+The template's body lives on a hidden page (`is_template=true` on the server),
+edited through the normal block endpoints (`/blocks`, by `page_id`).
+
+#### GET /databases/:databaseId/templates
+- 200: `{ data: { templates: TemplateDTO[] } }`
+
+#### POST /databases/:databaseId/templates
+- Body: `{ name?, icon? }`
+- 201: `{ data: { template: TemplateDTO } }` (creates a hidden body page; first
+  template on a database becomes the default)
+
+#### GET /databases/:databaseId/templates/:templateId
+- 200: `{ data: { template: TemplateDTO } }`
+
+#### PATCH /databases/:databaseId/templates/:templateId
+- Body: `{ name?, icon?, is_default?, default_values? }`
+  - `is_default: true` un-marks other templates on the same database (only one
+    default at a time).
+  - `default_values`: `{ property_id: value }`; server rejects non-editable
+    types (formula/rollup/created_*/last_edited_*).
+- 200: `{ data: { template: TemplateDTO } }`
+
+#### DELETE /databases/:databaseId/templates/:templateId
+- 204: no content (OWNER only; cascades the hidden body page + its blocks)
+
+#### Row creation with a template
+`POST /databases/:databaseId/rows` now accepts `{ template_id?: string | null }`.
+- Omitted/null + no default template → empty row (legacy behavior).
+- Explicit `template_id` → that template's body + defaults are applied.
+- Omitted/null + the database has a default template → the default is applied
+  automatically (Notion-style).
+
+Editing a template's body uses the standard block endpoints against the
+template's hidden `page_id`:
+- `POST /blocks` (create), `PATCH /blocks/:id`, `DELETE /blocks/:id`,
+  `POST /blocks/reorder` — all gated on EDITOR access via the template's
+  database → hosting page.

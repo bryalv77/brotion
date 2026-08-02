@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "e2e:server:frontend": "vite",
-    "e2e:server:backend": "yarn workspace backend dev"
+    "e2e:server:backend": "yarn workspace backend build && NODE_ENV=test yarn workspace backend start"
   },
   "dependencies": {
     "@notion-clone/shared": "0.1.0",

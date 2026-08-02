@@ -1,4 +1,12 @@
 import { test, expect, type APIRequestContext } from "@playwright/test";
+import {
+  API,
+  CSRF_HEADER,
+  HEADERS,
+  makePage,
+  makeWorkspace,
+  register,
+} from "./helpers.js";
 
 /**
  * Pages, blocks, search & files API e2e — spec 003 acceptance criteria.
@@ -6,43 +14,6 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  * Each test sets up a fresh user + workspace so runs are independent. Helper
  * functions keep the per-test setup terse.
  */
-
-const API = "/api/v1";
-const CSRF = "XMLHttpRequest";
-const HEADERS = { "Content-Type": "application/json", "X-Requested-With": CSRF };
-
-function uniq(p: string): string {
-  return `${p}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
-}
-
-async function register(request: APIRequestContext, email = uniq("u")): Promise<void> {
-  const res = await request.post(`${API}/auth/register`, {
-    data: { email, password: "password123" },
-    headers: HEADERS,
-  });
-  expect(res.status()).toBe(201);
-}
-
-async function makeWorkspace(request: APIRequestContext, name = "WS"): Promise<string> {
-  const res = await request.post(`${API}/workspaces`, {
-    data: { name },
-    headers: HEADERS,
-  });
-  return (await res.json()).data.workspace.id;
-}
-
-async function makePage(
-  request: APIRequestContext,
-  workspaceId: string,
-  body: Record<string, unknown> = {},
-): Promise<string> {
-  const res = await request.post(`${API}/workspaces/${workspaceId}/pages`, {
-    data: body,
-    headers: HEADERS,
-  });
-  expect(res.status()).toBe(201);
-  return (await res.json()).data.page.id;
-}
 
 interface BlockResp {
   id: string;
@@ -230,7 +201,7 @@ test.describe("blocks", () => {
     expect((await blocks.json()).data.blocks.length).toBe(0);
   });
 
-  test("reorder cycle → 400 (bad request, code CYCLE)", async ({ request }) => {
+  test("reorder cycle → 422 (code CYCLE)", async ({ request }) => {
     await register(request);
     const ws = await makeWorkspace(request);
     const pageId = await makePage(request, ws);
@@ -244,9 +215,117 @@ test.describe("blocks", () => {
       data: { block_id: parent.id, new_parent_block_id: child.id },
       headers: HEADERS,
     });
-    expect(res.status()).toBe(400);
+    expect(res.status()).toBe(422);
     const body = await res.json();
     expect(body.error.details?.code ?? body.error.code).toBe("CYCLE");
+  });
+
+  test("move reparents a page under another", async ({ request }) => {
+    await register(request);
+    const ws = await makeWorkspace(request);
+    const a = await makePage(request, ws, { title: "A" });
+    const b = await makePage(request, ws, { title: "B" });
+
+    const res = await request.post(`${API}/pages/${a}/move`, {
+      data: { new_parent_id: b },
+      headers: HEADERS,
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data.page.parent_id).toBe(b);
+
+    // A is no longer a root; it now appears under B.
+    const roots = (await (await request.get(`${API}/workspaces/${ws}/pages`)).json()).data.pages;
+    expect(roots.some((p: { id: string }) => p.id === a)).toBe(false);
+    const bKids = (
+      await (await request.get(`${API}/workspaces/${ws}/pages?parent_id=${b}`)).json()
+    ).data.pages;
+    expect(bKids.some((p: { id: string }) => p.id === a)).toBe(true);
+  });
+
+  test("move to root (new_parent_id null)", async ({ request }) => {
+    await register(request);
+    const ws = await makeWorkspace(request);
+    const parent = await makePage(request, ws, { title: "P" });
+    const child = await makePage(request, ws, { title: "C", parent_id: parent });
+
+    const res = await request.post(`${API}/pages/${child}/move`, {
+      data: { new_parent_id: null },
+      headers: HEADERS,
+    });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data.page.parent_id).toBe(null);
+
+    const roots = (await (await request.get(`${API}/workspaces/${ws}/pages`)).json()).data.pages;
+    expect(roots.some((p: { id: string }) => p.id === child)).toBe(true);
+  });
+
+  test("move cycle → 422 (code CYCLE)", async ({ request }) => {
+    await register(request);
+    const ws = await makeWorkspace(request);
+    const a = await makePage(request, ws, { title: "A" });
+    const b = await makePage(request, ws, { title: "B", parent_id: a });
+
+    // Moving A under its own descendant B would form a cycle.
+    const res = await request.post(`${API}/pages/${a}/move`, {
+      data: { new_parent_id: b },
+      headers: HEADERS,
+    });
+    expect(res.status()).toBe(422);
+    const body = await res.json();
+    expect(body.error.details?.code ?? body.error.code).toBe("CYCLE");
+  });
+
+  test("move self → 422 (code CYCLE)", async ({ request }) => {
+    await register(request);
+    const ws = await makeWorkspace(request);
+    const a = await makePage(request, ws, { title: "A" });
+
+    const res = await request.post(`${API}/pages/${a}/move`, {
+      data: { new_parent_id: a },
+      headers: HEADERS,
+    });
+    expect(res.status()).toBe(422);
+    const body = await res.json();
+    expect(body.error.details?.code ?? body.error.code).toBe("CYCLE");
+  });
+
+  test("move cross-workspace → 422 (code CROSS_WORKSPACE)", async ({ request }) => {
+    await register(request);
+    const ws1 = await makeWorkspace(request);
+    const ws2 = await makeWorkspace(request, "WS2");
+    const a = await makePage(request, ws1, { title: "A" });
+    const b = await makePage(request, ws2, { title: "B" });
+
+    const res = await request.post(`${API}/pages/${a}/move`, {
+      data: { new_parent_id: b },
+      headers: HEADERS,
+    });
+    expect(res.status()).toBe(422);
+    const body = await res.json();
+    expect(body.error.details?.code ?? body.error.code).toBe("CROSS_WORKSPACE");
+  });
+
+  test("ancestors returns root→leaf chain", async ({ request }) => {
+    await register(request);
+    const ws = await makeWorkspace(request);
+    const a = await makePage(request, ws, { title: "A" });
+    const b = await makePage(request, ws, { title: "B", parent_id: a });
+    const c = await makePage(request, ws, { title: "C", parent_id: b });
+
+    const res = await request.get(`${API}/pages/${c}/ancestors`, { headers: HEADERS });
+    expect(res.status()).toBe(200);
+    const chain = (await res.json()).data.breadcrumbs as { id: string }[];
+    expect(chain.map((p) => p.id)).toEqual([a, b]);
+  });
+
+  test("ancestors of a root page is empty", async ({ request }) => {
+    await register(request);
+    const ws = await makeWorkspace(request);
+    const a = await makePage(request, ws, { title: "A" });
+
+    const res = await request.get(`${API}/pages/${a}/ancestors`, { headers: HEADERS });
+    expect(res.status()).toBe(200);
+    expect((await res.json()).data.breadcrumbs).toEqual([]);
   });
 });
 
@@ -293,7 +372,7 @@ test.describe("files", () => {
         file: { name: "tiny.png", mimeType: "image/png", buffer: png },
         page_id: "",
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     expect(res.status()).toBe(201);
     const attachment = (await res.json()).data.attachment;
@@ -315,7 +394,7 @@ test.describe("files", () => {
       multipart: {
         file: { name: "big.png", mimeType: "image/png", buffer: big },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     expect(res.status()).toBe(413);
   });
@@ -330,7 +409,7 @@ test.describe("files", () => {
           buffer: Buffer.from("MZ"),
         },
       },
-      headers: { "X-Requested-With": CSRF },
+      headers: CSRF_HEADER,
     });
     expect(res.status()).toBe(400);
   });

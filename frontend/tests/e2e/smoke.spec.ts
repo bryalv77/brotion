@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
  */
 test.describe("smoke", () => {
   test("redirects to login when unauthenticated", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/", { waitUntil: "domcontentloaded" });
 
     // Should redirect to /login (the default catch-all redirects to /app which
     // RequireAuth redirects to /login).

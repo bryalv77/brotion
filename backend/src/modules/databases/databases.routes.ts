@@ -10,8 +10,21 @@ import {
   deleteDatabaseHandler,
   addPropertyHandler,
   updatePropertyHandler,
+  deletePropertyHandler,
+  movePropertyHandler,
   addRowHandler,
+  deleteRowHandler,
+  moveRowHandler,
   updatePropertyValueHandler,
+  createViewHandler,
+  updateViewHandler,
+  deleteViewHandler,
+  moveViewHandler,
+  createTemplateHandler,
+  listTemplatesHandler,
+  getTemplateHandler,
+  updateTemplateHandler,
+  deleteTemplateHandler,
 } from "./databases.controller.js";
 
 // Routes under /pages/:pageId/databases — mergeParams for :pageId.
@@ -32,7 +45,65 @@ databasesRouter.patch(
   csrfGuard,
   asyncHandler(updatePropertyHandler),
 );
+databasesRouter.delete(
+  "/:databaseId/properties/:propertyId",
+  csrfGuard,
+  asyncHandler(deletePropertyHandler),
+);
+databasesRouter.post(
+  "/:databaseId/properties/:propertyId/move",
+  csrfGuard,
+  asyncHandler(movePropertyHandler),
+);
 databasesRouter.post("/:databaseId/rows", csrfGuard, asyncHandler(addRowHandler));
+databasesRouter.post(
+  "/:databaseId/rows/:rowPageId/move",
+  csrfGuard,
+  asyncHandler(moveRowHandler),
+);
+
+// Views (one data source, many lenses).
+databasesRouter.post("/:databaseId/views", csrfGuard, asyncHandler(createViewHandler));
+databasesRouter.patch(
+  "/:databaseId/views/:viewId",
+  csrfGuard,
+  asyncHandler(updateViewHandler),
+);
+databasesRouter.delete(
+  "/:databaseId/views/:viewId",
+  csrfGuard,
+  asyncHandler(deleteViewHandler),
+);
+databasesRouter.post(
+  "/:databaseId/views/:viewId/move",
+  csrfGuard,
+  asyncHandler(moveViewHandler),
+);
+
+// Templates (factory rows for new pages).
+databasesRouter.get(
+  "/:databaseId/templates",
+  asyncHandler(listTemplatesHandler),
+);
+databasesRouter.post(
+  "/:databaseId/templates",
+  csrfGuard,
+  asyncHandler(createTemplateHandler),
+);
+databasesRouter.get(
+  "/:databaseId/templates/:templateId",
+  asyncHandler(getTemplateHandler),
+);
+databasesRouter.patch(
+  "/:databaseId/templates/:templateId",
+  csrfGuard,
+  asyncHandler(updateTemplateHandler),
+);
+databasesRouter.delete(
+  "/:databaseId/templates/:templateId",
+  csrfGuard,
+  asyncHandler(deleteTemplateHandler),
+);
 
 // Routes under /rows
 export const rowsRouter = Router();
@@ -42,3 +113,4 @@ rowsRouter.patch(
   csrfGuard,
   asyncHandler(updatePropertyValueHandler),
 );
+rowsRouter.delete("/:rowPageId", csrfGuard, asyncHandler(deleteRowHandler));

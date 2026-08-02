@@ -36,6 +36,10 @@ export const notFound = (message = "Not found") =>
   new ApiError(404, "NOT_FOUND", message);
 export const conflict = (message: string, details?: Record<string, unknown>) =>
   new ApiError(409, "CONFLICT", message, details);
+export const unprocessableEntity = (
+  message: string,
+  details?: Record<string, unknown>,
+) => new ApiError(422, "UNPROCESSABLE_ENTITY", message, details);
 
 interface ErrorEnvelope {
   error: {

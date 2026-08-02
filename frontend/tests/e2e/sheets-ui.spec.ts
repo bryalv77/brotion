@@ -1,49 +1,23 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
+import { createFreshPageInFirstWorkspace, HEADERS } from "./helpers.js";
 
 /**
  * Sheet UI e2e (spec 013 acceptance criteria H + I).
  *
  * The slash menu's "Database" item creates a sheet on the current page; the
  * sheet renders below the editor; a formula column recomputes when its
- * inputs change.
+ * inputs change. Uses the demo storageState so tests skip the login form.
  */
 
-const DEMO_EMAIL = "demo@notion.local";
-const DEMO_PASSWORD = "password123";
-
-async function loginViaUi(page: Page): Promise<void> {
-  await page.goto("/login", { waitUntil: "networkidle" });
-  await page.fill('input[type="email"]', DEMO_EMAIL);
-  await page.fill('input[type="password"]', DEMO_PASSWORD);
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/app\/.+/, { timeout: 15_000 });
-}
-
-async function createFreshPage(page: Page, title: string): Promise<{ wsId: string; pageId: string }> {
-  // Use the page's request context so cookies are shared.
-  const api = page.context().request;
-  const wsRes = await api.get("/api/v1/workspaces");
-  const wsId = (await wsRes.json()).data.workspaces[0].id as string;
-  const pageRes = await api.post(`/api/v1/workspaces/${wsId}/pages`, {
-    data: { title },
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-    },
-  });
-  expect(pageRes.status()).toBe(201);
-  const pageId = (await pageRes.json()).data.page.id as string;
-  return { wsId, pageId };
-}
-
 test.describe("sheets UI", () => {
+  test.use({ storageState: ".auth/demo.json" });
+
   test("slash menu → Database creates a sheet that renders below the editor", async ({
     page,
   }) => {
-    await loginViaUi(page);
-    const { wsId, pageId } = await createFreshPage(page, "Sheet Test");
+    const { wsId, pageId } = await createFreshPageInFirstWorkspace(page, "Sheet Test");
 
-    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "networkidle" });
+    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator(".nc-editor .ProseMirror")).toBeVisible({ timeout: 10_000 });
 
     // Add a sheet via the slash menu.
@@ -64,33 +38,25 @@ test.describe("sheets UI", () => {
   test("formula cell shows the computed result and an error for unknown property", async ({
     page,
   }) => {
-    await loginViaUi(page);
-    const { wsId, pageId } = await createFreshPage(page, "Formula Test");
+    const { wsId, pageId } = await createFreshPageInFirstWorkspace(page, "Formula Test");
     const api = page.context().request;
 
     // Create a sheet + columns via the API (deterministic).
-    const dbRes = await api.post(`/api/v1/pages/${pageId}/databases`, {
-      data: { title: "Math", icon: "📊" },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    });
-    const dbId = (await dbRes.json()).data.database.id as string;
-    const num = await api.post(`/api/v1/databases/${dbId}/properties`, {
-      data: { name: "N", type: "number" },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    });
-    const numId = (await num.json()).data.property.id as string;
+    const dbId = (
+      await (await api.post(`/api/v1/pages/${pageId}/databases`, {
+        data: { title: "Math", icon: "📊" },
+        headers: HEADERS,
+      })).json()
+    ).data.database.id as string;
+    const numId = (
+      await (await api.post(`/api/v1/databases/${dbId}/properties`, {
+        data: { name: "N", type: "number" },
+        headers: HEADERS,
+      })).json()
+    ).data.property.id as string;
     await api.post(`/api/v1/databases/${dbId}/properties`, {
       data: { name: "Bad", type: "formula", options: { formula: 'prop("Nope")' } },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers: HEADERS,
     });
     await api.post(`/api/v1/databases/${dbId}/properties`, {
       data: {
@@ -98,28 +64,20 @@ test.describe("sheets UI", () => {
         type: "formula",
         options: { formula: 'prop("N") * 2' },
       },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers: HEADERS,
     });
-    const row = await api.post(`/api/v1/databases/${dbId}/rows`, {
-      data: {},
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    });
-    const rowId = (await row.json()).data.row.page_id as string;
+    const rowId = (
+      await (await api.post(`/api/v1/databases/${dbId}/rows`, {
+        data: {},
+        headers: HEADERS,
+      })).json()
+    ).data.row.page_id as string;
     await api.patch(`/api/v1/rows/${rowId}/properties/${numId}`, {
       data: { value: 21 },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers: HEADERS,
     });
 
-    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "networkidle" });
+    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Math" })).toBeVisible({ timeout: 10_000 });
 
     // Find a cell that shows the value 42 (the Doubled formula).
@@ -137,68 +95,52 @@ test.describe("sheets UI", () => {
   test("changing a price in row A live-updates the sum() on row B", async ({
     page,
   }) => {
-    await loginViaUi(page);
-    const { wsId, pageId } = await createFreshPage(page, "Live Update");
+    const { wsId, pageId } = await createFreshPageInFirstWorkspace(page, "Live Update");
     const api = page.context().request;
 
     // Two rows, one Price column, one Total = sum(prop("Price")) column.
-    const dbRes = await api.post(`/api/v1/pages/${pageId}/databases`, {
-      data: { title: "Live", icon: "📊" },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    });
-    const dbId = (await dbRes.json()).data.database.id as string;
-    const price = await api.post(`/api/v1/databases/${dbId}/properties`, {
-      data: { name: "Price", type: "number" },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    });
-    const priceId = (await price.json()).data.property.id as string;
+    const dbId = (
+      await (await api.post(`/api/v1/pages/${pageId}/databases`, {
+        data: { title: "Live", icon: "📊" },
+        headers: HEADERS,
+      })).json()
+    ).data.database.id as string;
+    const priceId = (
+      await (await api.post(`/api/v1/databases/${dbId}/properties`, {
+        data: { name: "Price", type: "number" },
+        headers: HEADERS,
+      })).json()
+    ).data.property.id as string;
     await api.post(`/api/v1/databases/${dbId}/properties`, {
       data: {
         name: "Total",
         type: "formula",
         options: { formula: 'sum(prop("Price"))' },
       },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers: HEADERS,
     });
-    const rowA = (await (await api.post(`/api/v1/databases/${dbId}/rows`, {
-      data: {},
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    })).json()).data.row.page_id as string;
-    const rowB = (await (await api.post(`/api/v1/databases/${dbId}/rows`, {
-      data: {},
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-    })).json()).data.row.page_id as string;
+    const rowA = (
+      await (await api.post(`/api/v1/databases/${dbId}/rows`, {
+        data: {},
+        headers: HEADERS,
+      })).json()
+    ).data.row.page_id as string;
+    const rowB = (
+      await (await api.post(`/api/v1/databases/${dbId}/rows`, {
+        data: {},
+        headers: HEADERS,
+      })).json()
+    ).data.row.page_id as string;
     await api.patch(`/api/v1/rows/${rowA}/properties/${priceId}`, {
       data: { value: 10 },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers: HEADERS,
     });
     await api.patch(`/api/v1/rows/${rowB}/properties/${priceId}`, {
       data: { value: 20 },
-      headers: {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
+      headers: HEADERS,
     });
 
-    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "networkidle" });
+    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Live" })).toBeVisible({ timeout: 10_000 });
 
     // Initial state: every row's Total cell shows 30 (10 + 20).
@@ -224,10 +166,9 @@ test.describe("sheets UI", () => {
   test("no '+ Add a sheet' button on the page; /sheet creates one", async ({
     page,
   }) => {
-    await loginViaUi(page);
-    const { wsId, pageId } = await createFreshPage(page, "No Button");
+    const { wsId, pageId } = await createFreshPageInFirstWorkspace(page, "No Button");
 
-    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "networkidle" });
+    await page.goto(`/app/${wsId}/${pageId}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator(".nc-editor .ProseMirror")).toBeVisible({ timeout: 10_000 });
 
     // The "+ Add a sheet" button must not be on the page.

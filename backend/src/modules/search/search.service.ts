@@ -38,6 +38,7 @@ export async function searchPages(
     FROM pages
     WHERE workspace_id = ${workspaceId}
       AND is_deleted = false
+      AND is_template = false
       AND (title ILIKE ${pattern} OR content_text ILIKE ${pattern})
     ORDER BY rank DESC, updated_at DESC
     LIMIT ${limit}

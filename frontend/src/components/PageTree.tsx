@@ -3,14 +3,20 @@ import { useParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useChildPages } from "../hooks/useChildPages.js";
 import { useCreatePage } from "../hooks/useCreatePage.js";
+import { useMovePage } from "../hooks/useMovePage.js";
 import { deletePage } from "../api/pages.js";
 import { importFile } from "../api/import.js";
 import { useToast } from "../stores/toast.js";
 import type { PageSummaryDTO } from "@notion-clone/shared";
 
+// Module-level drag state. We set this on dragstart and read it during
+// dragover/drop, because dataTransfer.getData() is restricted outside drop.
+let draggedId: string | null = null;
+
 export function PageTree({ workspaceId }: { workspaceId: string }) {
   const { data: pages, isLoading } = useChildPages(workspaceId, null);
   const createPage = useCreatePage(workspaceId);
+  const movePage = useMovePage();
   const importInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -25,8 +31,28 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
     }
   }
 
+  // Drop on empty background → move to workspace root.
+  function handleRootDrop(e: React.DragEvent) {
+    const id = e.dataTransfer.getData("text/plain") || draggedId;
+    if (!id) return;
+    // Only treat as a root drop if the drop didn't land on a node (nodes stop
+    // propagation). Avoid no-op self-moves; the server guards the rest.
+    if (id) {
+      e.preventDefault();
+      e.stopPropagation();
+      movePage.mutate({ id, newParentId: null });
+    }
+    draggedId = null;
+  }
+
   return (
-    <div className="py-1">
+    <div
+      className="py-1"
+      onDragOver={(e) => {
+        if (draggedId) e.preventDefault(); // allow drop
+      }}
+      onDrop={handleRootDrop}
+    >
       <div className="mb-1 flex items-center justify-between px-2">
         <span className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-400">
           Pages
@@ -68,7 +94,7 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
         <div className="px-2 text-sm text-neutral-400 dark:text-neutral-400">Loading…</div>
       )}
       {pages?.map((p) => (
-        <PageTreeNode key={p.id} page={p} workspaceId={workspaceId} />
+        <PageTreeNode key={p.id} page={p} workspaceId={workspaceId} movePage={movePage} />
       ))}
       {pages?.length === 0 && !isLoading && (
         <div className="px-2 py-1 text-sm text-neutral-400 dark:text-neutral-400">
@@ -82,17 +108,54 @@ export function PageTree({ workspaceId }: { workspaceId: string }) {
 function PageTreeNode({
   page,
   workspaceId,
+  movePage,
 }: {
   page: PageSummaryDTO;
   workspaceId: string;
+  movePage: ReturnType<typeof useMovePage>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isDropTarget, setIsDropTarget] = useState(false);
   const { pageId: activePageId } = useParams();
   const qc = useQueryClient();
   const { data: children } = useChildPages(expanded ? workspaceId : undefined, page.id);
   const createSubPage = useCreatePage(workspaceId);
   const isActive = page.id === activePageId;
+
+  // ── drag-to-reparent ────────────────────────────────────────────────────
+  function handleDragStart(e: React.DragEvent) {
+    draggedId = page.id;
+    e.dataTransfer.setData("text/plain", page.id);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    if (!draggedId || draggedId === page.id) return;
+    e.preventDefault(); // allow drop
+    e.dataTransfer.dropEffect = "move";
+    if (!isDropTarget) setIsDropTarget(true);
+  }
+
+  function handleDragLeave() {
+    if (isDropTarget) setIsDropTarget(false);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    const id = e.dataTransfer.getData("text/plain") || draggedId;
+    e.preventDefault();
+    e.stopPropagation(); // don't bubble to the root-drop handler
+    setIsDropTarget(false);
+    draggedId = null;
+    // Client-side pre-guard (fast feedback). The server is authoritative.
+    if (!id || id === page.id) return;
+    movePage.mutate({ id, newParentId: page.id });
+  }
+
+  function handleDragEnd() {
+    draggedId = null;
+    setIsDropTarget(false);
+  }
 
   async function handleDelete() {
     setMenuOpen(false);
@@ -117,10 +180,18 @@ function PageTreeNode({
   return (
     <div>
       <div
+        draggable
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onDragEnd={handleDragEnd}
         className={`group flex items-center gap-1 rounded-md px-2 py-1 text-sm ${
           isActive
             ? "bg-neutral-200 font-medium dark:bg-neutral-700"
             : "hover:bg-neutral-200 dark:hover:bg-neutral-700"
+        } ${isDropTarget ? "ring-2 ring-blue-400/60 ring-inset" : ""} ${
+          draggedId === page.id ? "opacity-50" : ""
         }`}
       >
         {page.has_children ? (
@@ -175,7 +246,7 @@ function PageTreeNode({
       {expanded && page.has_children && (
         <div className="ml-4 border-l border-neutral-200 pl-1 dark:border-neutral-600">
           {children?.map((c) => (
-            <PageTreeNode key={c.id} page={c} workspaceId={workspaceId} />
+            <PageTreeNode key={c.id} page={c} workspaceId={workspaceId} movePage={movePage} />
           ))}
         </div>
       )}

@@ -16,5 +16,12 @@ export function generateRefreshToken(): string {
 export function hashRefreshToken(token: string): Promise<string> {
   // Lighter params than passwords are fine here — the token is already 256 bits
   // of entropy; the hash just prevents DB-read => token-reuse.
-  return argon2.hash(token, { type: argon2.argon2id });
+  // In test mode, drop cost further so the e2e suite's hundreds of token
+  // rotations don't dominate the runtime.
+  const baseOpts: argon2.Options = { type: argon2.argon2id };
+  const opts: argon2.Options =
+    process.env.NODE_ENV === "test"
+      ? { ...baseOpts, memoryCost: 1024, timeCost: 2, parallelism: 1 }
+      : baseOpts;
+  return argon2.hash(token, opts);
 }

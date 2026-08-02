@@ -1,6 +1,10 @@
 import type { Request, Response } from "express";
 import { ok, created, noContent } from "../../utils/http.js";
-import { createPageSchema, updatePageSchema } from "./pages.schema.js";
+import {
+  createPageSchema,
+  updatePageSchema,
+  movePageSchema,
+} from "./pages.schema.js";
 import {
   listChildPages,
   listTrashedPages,
@@ -11,6 +15,8 @@ import {
   restorePage,
   permanentDeletePage,
   duplicatePage,
+  movePage,
+  getPageAncestors,
 } from "./pages.service.js";
 
 /** GET /workspaces/:workspaceId/pages?parent_id=&include_deleted= */
@@ -65,6 +71,19 @@ export async function restorePageHandler(req: Request, res: Response): Promise<v
 export async function duplicatePageHandler(req: Request, res: Response): Promise<void> {
   const page = await duplicatePage(req.params.pageId, req.user!.id);
   created(res, { page });
+}
+
+/** POST /pages/:pageId/move — reparent a page (null new_parent_id = workspace root). */
+export async function movePageHandler(req: Request, res: Response): Promise<void> {
+  const input = movePageSchema.parse(req.body);
+  const page = await movePage(req.params.pageId, req.user!.id, input);
+  ok(res, { page });
+}
+
+/** GET /pages/:pageId/ancestors — breadcrumb chain, root→leaf (excludes self). */
+export async function getAncestorsHandler(req: Request, res: Response): Promise<void> {
+  const breadcrumbs = await getPageAncestors(req.params.pageId, req.user!.id);
+  ok(res, { breadcrumbs });
 }
 
 /** GET /workspaces/:workspaceId/trash */

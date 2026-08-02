@@ -1,7 +1,9 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getPage } from "../api/pages.js";
+import { Breadcrumbs } from "../components/Breadcrumbs.js";
 import { PageHeader } from "../components/PageHeader.js";
+import { RowProperties } from "../components/RowProperties.js";
 import { Editor } from "../features/editor/Editor.js";
 import { PageAttachments } from "../components/PageAttachments.js";
 import { PageDatabases } from "../components/PageDatabases.js";
@@ -40,7 +42,11 @@ export function PageView() {
 
   return (
     <div className="mx-auto max-w-3xl px-16 py-12">
+      <Breadcrumbs page={page} />
       <PageHeader page={page} />
+      {page.database_id && (
+        <RowProperties databaseId={page.database_id} rowPageId={page.id} />
+      )}
       <Editor pageId={page.id} blocks={blocks} />
       <PageDatabases pageId={page.id} />
       <PageAttachments pageId={page.id} />

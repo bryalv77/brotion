@@ -15,10 +15,11 @@
 - [x] 5. Workspaces module: dto, service (list/create/get with role),
       controller, routes. Creator becomes OWNER.
 - [x] 6. Pages module: dto, service (children/create/get-with-blocks/patch/
-      trash/permanent-delete/restore/duplicate), controller, routes. Cycle guard
-      on reparent. content_text maintained on block writes.
+      trash/permanent-delete/restore/duplicate/**move**/ancestors), controller,
+      routes. Cycle guard on reparent. content_text maintained on block writes.
 - [x] 7. Blocks module: dto, `order` math (compute/renormalize), service
       (create/list/patch/delete/reorder with cycle guard), controller, routes.
+      (Cycle guard returns **422**, reconciled with docs.)
 - [x] 8. Search module: raw `tsquery` via Prisma `$queryRaw`, returns ranked
       results with snippets. Route `GET /workspaces/:id/search`.
 - [x] 9. Files module: multer v2 (memory → disk write under `storage/`),
@@ -29,7 +30,18 @@
 - [x] Playwright API e2e covering every acceptance criterion (18 Task 3 tests +
       12 auth + 1 smoke = 31 total): workspace create/list/get/403, page
       CRUD+tree+trash/restore+duplicate, block create(before/after)/reorder/
-      patch/delete/cycle-400, search find+empty-400, upload ok/413/400-wrong-type.
+      patch/delete/cycle-422, search find+empty-400, upload ok/413/400-wrong-type,
+      page move (reparent/to-root/cycle/self/cross-workspace) + ancestors chain.
+
+## Addendum: recursive nesting UX (move + breadcrumbs + sidebar DnD)
+- [x] Backend: `POST /pages/:id/move` (reparent with page-tree cycle guard,
+      cross-workspace / deleted-parent / self-parent → 422) and
+      `GET /pages/:id/ancestors` (root→leaf breadcrumb chain). New
+      `unprocessableEntity()` helper; block reorder cycle reconciled to 422.
+- [x] Frontend: `Breadcrumbs` component above the page header; sidebar
+      drag-to-reparent via native HTML5 DnD (`draggable`/onDragOver/onDrop) with
+      drop-to-root on the sidebar background; `useMovePage` / `usePageBreadcrumbs`
+      hooks.
 
 ## Verification gate
 - [x] `yarn lint` — clean (0 errors, 0 warnings)

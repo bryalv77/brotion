@@ -29,6 +29,7 @@ export function toPageDTO(page: Page): PageDTO {
     created_by: page.created_by,
     created_at: page.created_at.toISOString(),
     updated_at: page.updated_at.toISOString(),
+    database_id: page.database_id,
   };
 }
 
