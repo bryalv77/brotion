@@ -54,3 +54,8 @@ frontend/.auth/
 .idea/
 .DS_Store
 *.swp
+
+# local iOS release artifacts
+ios/
+build/
+*.ipa

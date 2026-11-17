@@ -2,7 +2,7 @@
   "expo": {
     "name": "Notion Clone",
     "slug": "notion-clone",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "notionclone",
