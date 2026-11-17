@@ -5,24 +5,9 @@ import { Parser } from "./parser.js";
 import { evaluate, type EvalContext } from "./evaluator.js";
 import type { AstNode } from "./ast.js";
 import type { FnContext } from "./functions.js";
+import { FormulaError } from "./errors.js";
 
-/** The error codes we expose on `ComputedCell.error.code`. */
-export type FormulaErrorCode =
-  | "parse"
-  | "type"
-  | "circular"
-  | "unknown_property"
-  | "division_by_zero";
-
-export class FormulaError extends Error {
-  constructor(
-    public code: FormulaErrorCode,
-    message: string,
-  ) {
-    super(message);
-    this.name = "FormulaError";
-  }
-}
+export { FormulaError, type FormulaErrorCode } from "./errors.js";
 
 /** Property metadata the engine needs to evaluate a row. */
 export interface FormulaProperty {

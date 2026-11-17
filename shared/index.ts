@@ -8,3 +8,8 @@ export * from "./api-types.js";
 export * from "./block-schema.js";
 export * from "./formulas/index.js";
 export * from "./applyViewConfig.js";
+export * from "./order.js";
+export * from "./blockText.js";
+export * from "./rollup.js";
+export * from "./systemProps.js";
+export * from "./propertyOptions.js";

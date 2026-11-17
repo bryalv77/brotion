@@ -1,6 +1,6 @@
 /**
  * Formula engine barrel. Pure TypeScript — no runtime dependencies — so it
- * can run on the Express server, in the Cloudflare Worker, and in the
+ * can run on the Hono server (Node and Workers), and in the
  * client (local/guest databases compute `computed` cells with the exact
  * same code the backend uses).
  */

@@ -1,5 +1,5 @@
-import { FormulaError } from "./engine.js";
-import { toBool, toNumber, toString } from "./evaluator.js";
+import { FormulaError } from "./errors.js";
+import { toBool, toNumber, toString } from "./coerce.js";
 
 /**
  * Built-in function library for the formula engine.
