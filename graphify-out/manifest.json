@@ -321,12 +321,6 @@
     "ast_hash": "f88cfabed93842470b5712fb025405cc",
     "semantic_hash": ""
   },
-  "frontend/tailwind.config.ts": {
-    "mtime": 1784763984.4130213,
-    "seen": 1794854100.05409,
-    "ast_hash": "d6918160081be74309e30489dd12ac38",
-    "semantic_hash": "d6918160081be74309e30489dd12ac38"
-  },
   "frontend/tsconfig.json": {
     "mtime": 1794924601.7873092,
     "seen": 1794925241.185506,
@@ -542,9 +536,9 @@
     "semantic_hash": ""
   },
   "frontend/app/(app)/workspace/[wsId]/trash.tsx": {
-    "mtime": 1794926516.594017,
-    "seen": 1794926522.0575202,
-    "ast_hash": "5d645bac83c5d294d448e6f44a8e1f1c",
+    "mtime": 1794926761.9313502,
+    "seen": 1794926764.88093,
+    "ast_hash": "a1d57ad2a0bb903451255bf636f8f662",
     "semantic_hash": ""
   },
   "frontend/app/_layout.tsx": {
@@ -662,9 +656,9 @@
     "semantic_hash": ""
   },
   "frontend/components/db/TableView.tsx": {
-    "mtime": 1794925572.0878873,
-    "seen": 1794925575.588557,
-    "ast_hash": "f8c908b0971f76273f3709e506d46536",
+    "mtime": 1794926758.1173458,
+    "seen": 1794926764.8812811,
+    "ast_hash": "891df6f4a865d1cfe273276677bd3b33",
     "semantic_hash": ""
   },
   "frontend/components/db/TemplatesModal.tsx": {
@@ -884,9 +878,9 @@
     "semantic_hash": ""
   },
   "frontend/tailwind.config.js": {
-    "mtime": 1794925928.19,
-    "seen": 1794925957.424521,
-    "ast_hash": "8bbbfe7b1a7f0808ad37c3b74752cdf1",
+    "mtime": 1794926758.1172214,
+    "seen": 1794926764.8825018,
+    "ast_hash": "cc9160fc0de9d293128e8e65bda45af7",
     "semantic_hash": ""
   },
   "frontend/playwright.api.config.ts": {
@@ -1517,6 +1511,12 @@
     "mtime": 1794926516.5711918,
     "seen": 1794926522.05872,
     "ast_hash": "e0700fa4dc8a0386a84b9b44b5864321",
+    "semantic_hash": ""
+  },
+  "frontend/.impeccable/critique/2026-11-17T14-44-37Z__frontend.md": {
+    "mtime": 1794926677.9972694,
+    "seen": 1794926764.8833458,
+    "ast_hash": "208350e99955b5c2260e72fcd84a92e6",
     "semantic_hash": ""
   },
   "yarn.lock": {

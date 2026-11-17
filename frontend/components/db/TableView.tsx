@@ -2,6 +2,8 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { DatabaseDTO } from "@notion-clone/shared";
 import { deleteRow } from "@/lib/data/databases";
+import { restorePage } from "@/lib/data/pages";
+import { useToast } from "@/stores/toast";
 import { qk } from "@/lib/queryClient";
 import { EmptyState } from "@/components/ui";
 import { CellEditor } from "./CellEditor";
@@ -29,13 +31,23 @@ export function TableView({
   hidden: string[];
 }) {
   const qc = useQueryClient();
+  const showToast = useToast((s) => s.showToast);
   const properties = visibleProperties(db.properties, hidden);
   const primary = primaryProperty(db.properties);
 
   const deleteMut = useMutation({
     mutationFn: (rowPageId: string) => deleteRow(rowPageId),
-    onSuccess: () => {
+    onSuccess: (_data, rowPageId) => {
       qc.invalidateQueries({ queryKey: qk.databaseAnyView(db.id) });
+      // Rows are soft-deleted, so Undo is a restore.
+      showToast("Row deleted", "info", {
+        label: "Undo",
+        onPress: () => {
+          void restorePage(rowPageId).then(() =>
+            qc.invalidateQueries({ queryKey: qk.databaseAnyView(db.id) }),
+          );
+        },
+      });
     },
   });
 
@@ -102,7 +114,9 @@ export function TableView({
             <Pressable
               onPress={() => deleteMut.mutate(row.page_id)}
               accessibilityRole="button"
-              className="w-10 items-center justify-center"
+              accessibilityLabel="Delete row"
+              hitSlop={12}
+              className="min-h-11 w-11 items-center justify-center"
             >
               <X size={16} strokeWidth={1.5} color={colors.inkFaint} />
             </Pressable>

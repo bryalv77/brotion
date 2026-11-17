@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,7 +33,20 @@ export default function TrashScreen() {
     }
   };
 
+  // Permanent delete needs a second tap on the same row; it resets after 4 seconds.
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!confirmId) return;
+    const t = setTimeout(() => setConfirmId(null), 4000);
+    return () => clearTimeout(t);
+  }, [confirmId]);
+
   const destroy = async (id: string) => {
+    if (confirmId !== id) {
+      setConfirmId(id);
+      return;
+    }
+    setConfirmId(null);
     try {
       await permanentDeletePage(id);
       refresh();
@@ -65,7 +79,11 @@ export default function TrashScreen() {
                 </Muted>
               </View>
               <Button title="Restore" variant="secondary" onPress={() => restore(page.id)} />
-              <Button title="Delete forever" variant="danger" onPress={() => destroy(page.id)} />
+              <Button
+                title={confirmId === page.id ? "Tap again to delete" : "Delete forever"}
+                variant="danger"
+                onPress={() => destroy(page.id)}
+              />
             </View>
           ))}
         </View>
