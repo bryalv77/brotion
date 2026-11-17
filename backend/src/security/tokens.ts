@@ -1,27 +1,34 @@
-import { randomBytes } from "node:crypto";
-import argon2 from "argon2";
+import { constantTimeEqual, fromBase64Url, toBase64Url } from "./encoding.js";
 
 /**
- * Refresh tokens: opaque, random 32-byte values, URL-safe base64 for the cookie.
- * Only the argon2 hash is stored in `sessions.refresh_token_hash` — never the
- * raw token (same pattern as password storage).
+ * Refresh tokens: opaque 32-byte random values, URL-safe base64. Only a
+ * SHA-256 digest is stored (the token already has 256 bits of entropy, so a
+ * slow KDF adds nothing here). WebCrypto only — safe in Node and Workers.
  */
+const encoder = new TextEncoder();
 
-/** Generate a new raw refresh token to hand to the client. */
 export function generateRefreshToken(): string {
-  return randomBytes(32).toString("base64url");
+  return toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
 }
 
-/** Hash a refresh token for storage. */
-export function hashRefreshToken(token: string): Promise<string> {
-  // Lighter params than passwords are fine here — the token is already 256 bits
-  // of entropy; the hash just prevents DB-read => token-reuse.
-  // In test mode, drop cost further so the e2e suite's hundreds of token
-  // rotations don't dominate the runtime.
-  const baseOpts: argon2.Options = { type: argon2.argon2id };
-  const opts: argon2.Options =
-    process.env.NODE_ENV === "test"
-      ? { ...baseOpts, memoryCost: 1024, timeCost: 2, parallelism: 1 }
-      : baseOpts;
-  return argon2.hash(token, opts);
+async function digest(token: string): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(token)));
+}
+
+export async function hashRefreshToken(token: string): Promise<string> {
+  return `$sha256$${toBase64Url(await digest(token))}`;
+}
+
+export async function verifyRefreshToken(
+  stored: string,
+  token: string,
+): Promise<boolean> {
+  if (!stored.startsWith("$sha256$")) return false;
+  try {
+    const expected = fromBase64Url(stored.slice("$sha256$".length));
+    const actual = await digest(token);
+    return constantTimeEqual(actual, expected);
+  } catch {
+    return false;
+  }
 }

@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
+    "build:worker": "wrangler deploy --dry-run --outdir dist-worker",
     "test:unit": "node --import tsx --test \"src/modules/**/*.test.ts\"",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
@@ -21,7 +22,9 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "0.10.4",
     "@notion-clone/shared": "0.1.0",
+    "@prisma/adapter-neon": "5.22.0",
     "@prisma/client": "^5.22.0",
     "argon2": "^0.41.1",
     "cheerio": "^1.2.0",
@@ -29,10 +32,14 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "hash-wasm": "^4.13.0",
+    "hono": "^4.13.19",
+    "jose": "^6.2.17",
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.12.0",
     "markdown-it": "^14.3.0",
     "multer": "^2.0.0",
+    "pdf-lib": "^1.17.1",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
     "puppeteer": "^25.3.0",
@@ -41,6 +48,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261116.1",
     "@types/cheerio": "^1.0.0",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
@@ -52,6 +60,7 @@
     "pino-pretty": "^11.3.0",
     "prisma": "^5.22.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "wrangler": "^4.163.0"
   }
 }

@@ -1,12 +1,13 @@
 import type { Response } from "express";
 import type { User } from "@prisma/client";
 import type { UserDTO } from "@notion-clone/shared";
-import argon2 from "argon2";
+
 import { getPrisma } from "../../prisma/client.js";
 import { hashPassword, verifyPassword } from "../../security/password.js";
 import {
   generateRefreshToken,
   hashRefreshToken,
+  verifyRefreshToken,
 } from "../../security/tokens.js";
 import { signAccessToken } from "../../security/jwt.js";
 import {
@@ -29,9 +30,20 @@ import { conflict, unauthorized } from "../../utils/errors.js";
  * shape the HTTP response via the `ok`/`created`/`noContent` helpers.
  */
 
+/**
+ * Session material returned to callers. The web app ignores the tokens (they
+ * live in httpOnly cookies); the native clients (Expo iOS/Android) persist them
+ * in secure storage and send them as bearer/refresh headers.
+ */
+export interface IssuedSession {
+  user: UserDTO;
+  accessToken: string;
+  refreshToken: string;
+}
+
 /** Mint access JWT + create a Session row, set both cookies on the response. */
-async function issueSession(res: Response, user: User): Promise<UserDTO> {
-  const accessToken = signAccessToken(user.id);
+async function issueSession(res: Response, user: User): Promise<IssuedSession> {
+  const accessToken = await signAccessToken(user.id);
   const refreshToken = generateRefreshToken();
   const refreshHash = await hashRefreshToken(refreshToken);
   const expiresAt = new Date(
@@ -49,13 +61,13 @@ async function issueSession(res: Response, user: User): Promise<UserDTO> {
   res.cookie(ACCESS_COOKIE, accessToken, accessCookieOptions());
   res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
 
-  return toUserDTO(user);
+  return { user: toUserDTO(user), accessToken, refreshToken };
 }
 
 export async function register(
   res: Response,
   input: { email: string; password: string; name?: string },
-): Promise<UserDTO> {
+): Promise<IssuedSession> {
   const existing = await findUserByEmail(input.email);
   if (existing) {
     throw conflict("An account with that email already exists.");
@@ -72,7 +84,7 @@ export async function register(
 export async function login(
   res: Response,
   input: { email: string; password: string },
-): Promise<UserDTO> {
+): Promise<IssuedSession> {
   // Deliberately identical message for unknown-email vs wrong-password.
   const user = await findUserByEmail(input.email);
   if (!user) {
@@ -85,8 +97,7 @@ export async function login(
   return issueSession(res, user);
 }
 
-export interface RefreshResult {
-  user: UserDTO;
+export interface RefreshResult extends IssuedSession {
   /** Whether a fresh refresh cookie was issued (rotation). */
   rotated: boolean;
 }
@@ -111,7 +122,7 @@ export async function refresh(res: Response, rawToken?: string): Promise<Refresh
 
   let matched: (typeof candidates)[number] | null = null;
   for (const c of candidates) {
-    if (await argon2.verify(c.refresh_token_hash, rawToken)) {
+    if (await verifyRefreshToken(c.refresh_token_hash, rawToken)) {
       matched = c;
       break;
     }
@@ -124,8 +135,8 @@ export async function refresh(res: Response, rawToken?: string): Promise<Refresh
     data: { revoked_at: new Date() },
   });
 
-  const dto = await issueSession(res, matched.user);
-  return { user: dto, rotated: true };
+  const session = await issueSession(res, matched.user);
+  return { ...session, rotated: true };
 }
 
 export async function logout(res: Response, rawToken?: string): Promise<void> {
@@ -135,7 +146,7 @@ export async function logout(res: Response, rawToken?: string): Promise<void> {
       where: { revoked_at: null },
     });
     for (const c of candidates) {
-      if (await argon2.verify(c.refresh_token_hash, rawToken)) {
+      if (await verifyRefreshToken(c.refresh_token_hash, rawToken)) {
         await getPrisma().session.update({
           where: { id: c.id },
           data: { revoked_at: new Date() },

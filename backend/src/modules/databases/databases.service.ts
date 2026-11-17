@@ -1,6 +1,6 @@
 import { getPrisma } from "../../prisma/client.js";
 import { getAccessiblePage } from "../auth/permissions.service.js";
-import { applyViewConfig, type ViewRow } from "./applyViewConfig.js";
+import { applyViewConfig, type ViewRow } from "@notion-clone/shared";
 import { toDatabaseDTO } from "./databases.dto.js";
 import { badRequest, notFound } from "../../utils/errors.js";
 import {
@@ -14,7 +14,7 @@ import {
   evaluateCellCached,
   type AllValuesByName,
   type FormulaProperty,
-} from "../formulas/engine.js";
+} from "@notion-clone/shared/formulas";
 import type { ComputedCell, ViewConfig } from "@notion-clone/shared";
 
 /**

@@ -11,6 +11,6 @@
     "composite": false,
     "noEmit": false
   },
-  "include": ["./*.ts"],
-  "exclude": ["./dist"]
+  "include": ["./*.ts", "./formulas/*.ts"],
+  "exclude": ["./dist", "**/*.test.ts"]
 }

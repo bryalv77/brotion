@@ -4,7 +4,8 @@
 // the search-text denormalization. Sharing/comments/permissions land in Task 4.
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {

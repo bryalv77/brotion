@@ -6,3 +6,5 @@
  */
 export * from "./api-types.js";
 export * from "./block-schema.js";
+export * from "./formulas/index.js";
+export * from "./applyViewConfig.js";

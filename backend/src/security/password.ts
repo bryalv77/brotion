@@ -1,23 +1,50 @@
-import argon2 from "argon2";
+import { constantTimeEqual, fromBase64Url, toBase64Url } from "./encoding.js";
 
 /**
- * Password hashing with argon2id (OWASP-recommended baseline).
- * Params are the OWASP suggested minimums for argon2id.
- *
- * In test mode (NODE_ENV=test) the params are dropped to the minimum so the
- * hundreds of register/login calls in the e2e suite don't each pay a 50–150ms
- * hash. The hash format is still valid argon2id, so production code paths are
- * unchanged. Set NODE_ENV back to "development"/"production" in real envs.
+ * Password hashing with PBKDF2-SHA256 via WebCrypto — pure platform crypto, no
+ * native module and no runtime WebAssembly (which Cloudflare Workers forbids).
+ * Hash format: `$pbkdf2$<iterations>$<saltB64>$<hashB64>`.
  */
-const OPTIONS: argon2.Options =
-  process.env.NODE_ENV === "test"
-    ? { type: argon2.argon2id, memoryCost: 1024, timeCost: 2, parallelism: 1 }
-    : { type: argon2.argon2id, memoryCost: 19_456, timeCost: 2, parallelism: 1 };
+const ITERATIONS = 100_000;
+const encoder = new TextEncoder();
 
-export function hashPassword(plain: string): Promise<string> {
-  return argon2.hash(plain, OPTIONS);
+async function derive(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
+    key,
+    256,
+  );
+  return new Uint8Array(bits);
 }
 
-export function verifyPassword(hash: string, plain: string): Promise<boolean> {
-  return argon2.verify(hash, plain);
+export async function hashPassword(plain: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const hash = await derive(plain, salt, ITERATIONS);
+  return `$pbkdf2$${ITERATIONS}$${toBase64Url(salt)}$${toBase64Url(hash)}`;
+}
+
+export async function verifyPassword(stored: string, plain: string): Promise<boolean> {
+  const parts = stored.split("$");
+  if (parts.length !== 5 || parts[1] !== "pbkdf2") return false;
+  const iterations = Number(parts[2]);
+  if (!Number.isSafeInteger(iterations) || iterations <= 0) return false;
+  try {
+    const salt = fromBase64Url(parts[3]);
+    const expected = fromBase64Url(parts[4]);
+    const actual = await derive(plain, salt, iterations);
+    return constantTimeEqual(actual, expected);
+  } catch {
+    return false;
+  }
 }

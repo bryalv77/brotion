@@ -1,0 +1,8 @@
+# Expo Router dynamic-route shells are copied to .htm files under /_shells by
+# scripts/prepare-pages.js (Cloudflare strips .html and encodes brackets).
+
+/workspace/*/trash  /_shells/trash.htm      200
+/page/*             /_shells/page.htm       200
+/workspace/*        /_shells/workspace.htm  200
+
+/*                  /index.html             200

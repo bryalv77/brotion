@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Notion Clone",
+    "slug": "notion-clone",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "notionclone",
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bryalv77.notionclone"
+    },
+    "android": {
+      "edgeToEdge": true,
+      "package": "com.bryalv77.notionclone"
+    }
+  }
+}

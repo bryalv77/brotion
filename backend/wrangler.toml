@@ -1,0 +1,16 @@
+name = "notion-clone-api"
+main = "src/workers/index.ts"
+compatibility_date = "2026-11-16"
+compatibility_flags = ["nodejs_compat", "handle_cross_request_promise_resolution"]
+
+# Secrets (set with `wrangler secret put`):
+#   DATABASE_URL, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+# Optional vars: CLIENT_ORIGIN, COOKIE_SECURE, JWT_ACCESS_TTL, JWT_REFRESH_TTL_DAYS
+
+[vars]
+CLIENT_ORIGIN = "https://notion-clone-web.pages.dev"
+COOKIE_SECURE = "true"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "notion-clone-files"

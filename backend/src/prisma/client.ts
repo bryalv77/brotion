@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { PrismaClient } from "@prisma/client";
 
 /**
@@ -10,12 +11,33 @@ import { PrismaClient } from "@prisma/client";
  */
 let prisma: PrismaClient | null = null;
 
+/**
+ * Cloudflare Workers forbids reusing I/O objects (like a Neon WebSocket pool)
+ * across requests. The Workers entry runs each request with its own client in
+ * this store; Node keeps using the module-level singleton.
+ */
+const requestScope = new AsyncLocalStorage<PrismaClient>();
+
+export function runWithPrisma<T>(client: PrismaClient, fn: () => T): T {
+  return requestScope.run(client, fn);
+}
+
 export function getPrisma(): PrismaClient {
+  const scoped = requestScope.getStore();
+  if (scoped) return scoped;
   if (prisma) return prisma;
   prisma = new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
   });
   return prisma;
+}
+
+/**
+ * Let the Workers entrypoint inject a Neon-adapter-backed client at startup.
+ * All services keep calling `getPrisma()` unchanged.
+ */
+export function setPrisma(client: PrismaClient): void {
+  prisma = client;
 }
 
 export async function disconnectPrisma(): Promise<void> {

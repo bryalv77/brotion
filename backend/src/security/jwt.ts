@@ -1,42 +1,40 @@
-import jwt, { type JwtPayload } from "jsonwebtoken";
-import type { StringValue } from "ms";
+import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { env } from "../config/env.js";
 
 /**
- * Stateless access tokens (JWT). Short-lived (15m default). The subject is the
- * user id. No DB lookup is needed to verify — that's the point.
- *
- * Secrets are validated as required in production here (first call site), so a
- * misconfigured prod deploy fails loudly on the first auth attempt rather than
- * silently issuing unsigned tokens.
+ * Stateless access tokens (JWT, HS256). jose uses WebCrypto, so tokens are
+ * issued and verified identically in Node and in Cloudflare Workers.
+ * Existing tokens from the old `jsonwebtoken` implementation remain valid.
  */
 
-export interface AccessTokenPayload extends JwtPayload {
-  sub: string; // user id
+export interface AccessTokenPayload extends JWTPayload {
+  sub: string;
 }
 
-function accessSecret(): string {
+function secretKey(): Uint8Array {
   const secret = env.JWT_ACCESS_SECRET;
   if (env.NODE_ENV === "production" && !secret) {
     throw new Error(
       "JWT_ACCESS_SECRET is required in production (set a ≥32-char random string).",
     );
   }
-  // Fall back to a dev-only secret so local dev without .env secrets still works.
-  return secret ?? "dev-only-access-secret-not-for-production-use-32chars";
+  return new TextEncoder().encode(
+    secret ?? "dev-only-access-secret-not-for-production-use-32chars",
+  );
 }
 
-export function signAccessToken(userId: string): string {
-  return jwt.sign({ sub: userId }, accessSecret(), {
-    // env string like "15m" — asserted to ms's StringValue brand.
-    expiresIn: env.JWT_ACCESS_TTL as StringValue,
-  });
+export async function signAccessToken(userId: string): Promise<string> {
+  return new SignJWT({ sub: userId })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuedAt()
+    .setExpirationTime(env.JWT_ACCESS_TTL)
+    .sign(secretKey());
 }
 
-export function verifyAccessToken(token: string): AccessTokenPayload {
-  const payload = jwt.verify(token, accessSecret()) as AccessTokenPayload;
+export async function verifyAccessToken(token: string): Promise<AccessTokenPayload> {
+  const { payload } = await jwtVerify(token, secretKey());
   if (typeof payload.sub !== "string") {
     throw new Error("Invalid access token: missing subject");
   }
-  return payload;
+  return payload as AccessTokenPayload;
 }

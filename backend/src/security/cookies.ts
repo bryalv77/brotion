@@ -14,7 +14,9 @@ const REFRESH_TTL_SECONDS = env.JWT_REFRESH_TTL_DAYS * 24 * 60 * 60;
 
 const baseOptions = (): CookieOptions => ({
   httpOnly: true,
-  sameSite: "lax",
+  // Pages and Workers live on different sites, so production cookies must be
+  // SameSite=None; Secure to travel with the cross-origin fetch.
+  sameSite: env.COOKIE_SECURE === "true" ? "none" : "lax",
   secure: env.COOKIE_SECURE === "true",
   path: "/",
 });

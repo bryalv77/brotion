@@ -44,13 +44,36 @@ import { pageTemplatesRouter, workspacePageTemplatesRouter } from "./modules/pag
 export function createApp(): Express {
   const app = express();
 
-  app.use(pinoHttp({ logger }));
+  app.use(pinoHttp({ logger: logger as never }));
   app.use(express.json());
   app.use(cookieParser());
+  // Web runs on CLIENT_ORIGIN; Expo web/dev servers and native clients send
+  // other (or no / `null`) origins. Allow localhost dev ports, the configured
+  // web origin, and origin-less native requests, while still echoing an
+  // explicit origin so `credentials: true` remains valid.
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN,
+      origin: (origin, callback) => {
+        if (
+          !origin ||
+          origin === "null" ||
+          origin === env.CLIENT_ORIGIN ||
+          /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+        ) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      },
       credentials: true,
+      allowedHeaders: [
+        "Content-Type",
+        "X-Requested-With",
+        "Authorization",
+        "X-Client-Platform",
+        "X-Refresh-Token",
+      ],
+      exposedHeaders: ["Set-Cookie"],
     }),
   );
 

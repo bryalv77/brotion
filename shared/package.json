@@ -17,13 +17,20 @@
     "./block-schema": {
       "types": "./dist/block-schema.d.ts",
       "import": "./dist/block-schema.js"
+    },
+    "./formulas": {
+      "types": "./dist/formulas/index.d.ts",
+      "import": "./dist/formulas/index.js"
     }
   },
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --import tsx --test \"formulas/*.test.ts\" \"./*.test.ts\""
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }

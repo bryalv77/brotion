@@ -29,6 +29,15 @@ export interface ApiError {
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
+/**
+ * Returned to native (Expo) clients that opt in with `X-Client-Platform: native`.
+ * The browser never sees these — its session stays in httpOnly cookies.
+ */
+export interface NativeSessionTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Enums (mirror Prisma enums — keep in sync)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -519,4 +528,58 @@ export interface PageTemplateSummaryDTO {
 /** Body for POST /workspaces/:workspaceId/page-templates/:templateId/instantiate. */
 export interface InstantiatePageTemplateRequest {
   parent_id: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Local (guest) data adoption — POST /me/adopt-local
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A database definition from a local snapshot. Same shape the client stored
+ * in guest mode; rows are NOT embedded — row pages appear in `pages` (with
+ * `database_id`) and their cells in `values`.
+ */
+export interface AdoptLocalDatabase {
+  id: string;
+  page_id: string;
+  workspace_id: string;
+  title: string;
+  icon: string | null;
+  properties: PropertyDTO[];
+  views: DatabaseViewDTO[];
+  templates: TemplateDTO[];
+}
+
+/** A stored cell value from a local snapshot. */
+export interface AdoptLocalValue {
+  page_id: string;
+  property_id: string;
+  value: unknown;
+}
+
+/** Body for POST /me/adopt-local — uploads guest-mode data into the account. */
+export interface AdoptLocalRequest {
+  workspaces: WorkspaceDTO[];
+  /** All local pages (tree pages, database rows, template body pages). */
+  pages: AdoptLocalPage[];
+  blocks: BlockDTO[];
+  databases: AdoptLocalDatabase[];
+  values: AdoptLocalValue[];
+}
+
+/** A page as stored locally — PageDTO plus the server columns it mirrors. */
+export interface AdoptLocalPage extends PageDTO {
+  deleted_at?: string | null;
+  row_order?: number;
+  is_template?: boolean;
+}
+
+/** Response for POST /me/adopt-local. */
+export interface AdoptLocalResponse {
+  adopted: {
+    workspaces: number;
+    pages: number;
+    blocks: number;
+    databases: number;
+  };
 }

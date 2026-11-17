@@ -9,8 +9,11 @@
   ],
   "scripts": {
     "dev": "concurrently -n frontend,backend -c blue,green \"yarn dev:frontend\" \"yarn dev:backend\"",
-    "dev:frontend": "yarn workspace frontend dev",
+    "dev:frontend": "yarn workspace frontend web",
     "dev:backend": "yarn workspace backend dev",
+    "web": "yarn workspace frontend web",
+    "ios": "yarn workspace frontend ios",
+    "android": "yarn workspace frontend android",
     "build": "yarn workspaces run build",
     "start": "yarn workspace backend start",
     "migrate": "yarn workspace backend prisma:migrate",
@@ -18,7 +21,9 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "yarn workspaces run typecheck",
+    "test:api": "yarn workspace frontend test:api",
     "test:e2e": "yarn workspace frontend test:e2e",
+    "test:e2e:legacy": "cd frontend && playwright test --config legacy-web/playwright.config.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },

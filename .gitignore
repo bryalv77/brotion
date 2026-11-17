@@ -10,12 +10,14 @@ node_modules/
 
 # build output
 dist/
+dist-worker/
 build/
 *.tsbuildinfo
 
 # env / secrets
 .env
 .env.*
+.dev.vars
 !.env.example
 
 # logs
@@ -26,6 +28,16 @@ yarn-error.log*
 
 # uploads (local file storage)
 backend/storage/
+
+# graphify generated caches / timestamped backups
+graphify-out/cache/
+graphify-out/[0-9][0-9][0-9][0-9]-*/
+
+# Expo / React Native generated native projects (regenerate with `expo prebuild`)
+.expo/
+frontend/.expo/
+frontend/ios/
+frontend/android/
 
 # Playwright
 /test-results/

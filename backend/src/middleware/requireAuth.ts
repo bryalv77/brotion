@@ -17,13 +17,18 @@ export async function requireAuth(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const token = req.cookies?.[ACCESS_COOKIE];
+    // Browser: httpOnly cookie. Native (Expo): bearer token from secure storage.
+    const authHeader = req.get("Authorization");
+    const bearer = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length).trim()
+      : undefined;
+    const token = bearer ?? req.cookies?.[ACCESS_COOKIE];
     if (!token) {
       next(unauthorized());
       return;
     }
 
-    const payload = verifyAccessToken(token);
+    const payload = await verifyAccessToken(token);
     const user = await findUserById(payload.sub);
     if (!user) {
       next(unauthorized());

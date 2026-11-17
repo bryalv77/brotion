@@ -1,14 +1,31 @@
 {
-  "extends": "../tsconfig.base.json",
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "strict": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true,
-    "useDefineForClassFields": true,
-    "types": ["vite/client", "node"]
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "types": [
+      "expo",
+      "node"
+    ],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true
   },
-  "include": ["src", "tests", "playwright.config.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "legacy-web",
+    "playwright.config.ts"
+  ]
 }
