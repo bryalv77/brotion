@@ -87,7 +87,7 @@ export function SlashMenu({ visible, onClose, onSelect }: SlashMenuProps) {
     >
       <View className="flex-1 bg-white px-5 pt-5">
         <View className="mb-3 flex-row items-center justify-between">
-          <Text className="text-lg font-semibold text-ink">
+          <Text className="text-lg font-medium text-ink">
             {pending === "image"
               ? "Image URL"
               : pending === "page_ref"
@@ -136,7 +136,7 @@ export function SlashMenu({ visible, onClose, onSelect }: SlashMenuProps) {
                 key={item.type}
                 onPress={() => choose(item)}
                 accessibilityRole="button"
-                className="flex-row items-center gap-3 rounded-lg px-3 py-2.5"
+                className="flex-row items-center gap-3 rounded-lg px-3 py-2"
               >
                 <Text className="w-7 text-center text-lg text-inkLight">{item.icon}</Text>
                 <Text className="text-base text-ink">{item.label}</Text>

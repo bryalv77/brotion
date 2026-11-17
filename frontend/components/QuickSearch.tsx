@@ -102,20 +102,21 @@ export function QuickSearch() {
           className="absolute inset-0"
         />
         <View
-          className="w-full overflow-hidden rounded-xl bg-white"
+          className="w-full overflow-hidden rounded-xl border border-border bg-white"
           style={{
             maxWidth: 520,
-            shadowColor: "#000",
-            shadowOpacity: 0.2,
-            shadowRadius: 14,
-            elevation: 8,
+            shadowColor: "#37352f",
+            shadowOpacity: 0.08,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 4,
           }}
         >
           <Input
             autoFocus
             value={query}
             onChangeText={setQuery}
-            placeholder="Search pages…"
+            placeholder="Search"
             returnKeyType="search"
             className="rounded-none border-0 border-b border-border px-4"
           />
@@ -123,7 +124,7 @@ export function QuickSearch() {
           <View className="min-h-[96px] max-h-80">
             {!trimmed ? (
               <View className="px-4 py-8 items-center">
-                <Text className="text-sm text-inkFaint">Type to search pages…</Text>
+                <Text className="text-sm text-inkFaint">Type to search</Text>
               </View>
             ) : loading ? (
               <View className="flex-row items-center justify-center gap-2 py-8">

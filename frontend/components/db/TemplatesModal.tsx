@@ -2,7 +2,7 @@ import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addRow, listTemplates } from "@/lib/data/databases";
 import { qk } from "@/lib/queryClient";
-import { Button, H2, Loading, Muted } from "@/components/ui";
+import { Button, H2, Loading, Muted, PageGlyph } from "@/components/ui";
 
 /** Minimal template picker: instantiate a template (or an empty row) as a new row. */
 export function TemplatesModal({
@@ -60,7 +60,7 @@ export function TemplatesModal({
                   disabled={addMut.isPending}
                   className="flex-row items-center gap-3 rounded-lg border border-border px-3 py-3"
                 >
-                  <Text className="text-2xl">{template.icon ?? "📄"}</Text>
+                  {template.icon ? <Text className="text-2xl">{template.icon}</Text> : <PageGlyph size={24} />}
                   <Text className="flex-1 text-base text-ink">
                     {template.name || "Untitled template"}
                   </Text>

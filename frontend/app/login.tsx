@@ -24,8 +24,8 @@ export default function LoginScreen() {
     <Screen centered className="px-6">
       <View className="w-full max-w-sm gap-5">
         <View>
-          <H1>Welcome back</H1>
-          <Muted className="mt-1">Sign in to your workspace.</Muted>
+          <H1>Sign in</H1>
+          <Muted className="mt-2">Use your workspace account</Muted>
         </View>
         <ErrorBanner message={error} />
         <Input

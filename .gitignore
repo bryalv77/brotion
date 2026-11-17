@@ -59,3 +59,6 @@ frontend/.auth/
 ios/
 build/
 *.ipa
+
+# graphify hook session cache
+**/graphify-out/cache/hook_sessions/

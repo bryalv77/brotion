@@ -13,6 +13,8 @@ import { updateView } from "@/lib/data/databases";
 import { qk } from "@/lib/queryClient";
 import { isGroupable } from "./helpers";
 import { Button, Chip, Divider, ErrorBanner, H2, Input, Muted } from "@/components/ui";
+import { ArrowDown, ArrowUp, X } from "lucide-react-native";
+import { colors } from "@/lib/theme";
 
 const FILTER_OPS: FilterOp[] = [
   "eq",
@@ -107,7 +109,7 @@ export function FilterSortBar({
         className="flex-row items-center gap-2 rounded-lg bg-surface-hover px-3 py-2"
       >
         <Text className="text-sm font-medium text-ink">
-          {expanded ? "▾" : "▸"} Filters &amp; sorting
+          Filters &amp; sorting
         </Text>
         <Text className="text-xs text-inkLight">
           {activeCount > 0 ? `${activeCount} active` : "none"}
@@ -118,7 +120,7 @@ export function FilterSortBar({
         <View className="gap-2">
           <View className="flex-row flex-wrap gap-2">
             {config.filters.map((filter, index) => {
-              const text = `🔎 ${filter.property} ${filter.op}${
+              const text = `${filter.property} ${filter.op}${
                 filterValueText(filter.value) ? ` ${filterValueText(filter.value)}` : ""
               }`;
               return (
@@ -130,9 +132,9 @@ export function FilterSortBar({
                       filters: config.filters.filter((_, i) => i !== index),
                     })
                   }
-                  className="rounded-full bg-surface-hover px-3 py-1.5"
+                  className="rounded-lg bg-surface-hover px-3 py-2"
                 >
-                  <Text className="text-xs text-ink">{text} ×</Text>
+                  <View className="flex-row items-center gap-1"><Text className="text-xs text-ink">{text}</Text><X size={12} strokeWidth={1.5} color={colors.inkLight} /></View>
                 </Pressable>
               );
             })}
@@ -145,11 +147,13 @@ export function FilterSortBar({
                     sorts: config.sorts.filter((_, i) => i !== index),
                   })
                 }
-                className="rounded-full bg-surface-hover px-3 py-1.5"
+                className="rounded-lg bg-surface-hover px-3 py-2"
               >
-                <Text className="text-xs text-ink">
-                  ↕ {sort.property} {sort.direction === "asc" ? "↑" : "↓"} ×
-                </Text>
+                <View className="flex-row items-center gap-1">
+                  {sort.direction === "asc" ? <ArrowUp size={12} strokeWidth={1.5} color={colors.inkLight} /> : <ArrowDown size={12} strokeWidth={1.5} color={colors.inkLight} />}
+                  <Text className="text-xs text-ink">{sort.property}</Text>
+                  <X size={12} strokeWidth={1.5} color={colors.inkLight} />
+                </View>
               </Pressable>
             ))}
             {activeCount === 0 ? <Muted>No filters or sorts yet.</Muted> : null}
@@ -206,7 +210,7 @@ export function FilterSortBar({
             <H2>Filters &amp; sorting</H2>
             <ScrollView className="max-h-[55%]">
               <View className="gap-2">
-                <Text className="text-sm font-semibold text-ink">Add a filter</Text>
+                <Text className="text-sm font-medium text-ink">Add a filter</Text>
                 <Muted>Property</Muted>
                 <View className="flex-row flex-wrap gap-1">
                   {db.properties.map((property) => (
@@ -243,7 +247,7 @@ export function FilterSortBar({
 
                 <Divider />
 
-                <Text className="text-sm font-semibold text-ink">Add a sort</Text>
+                <Text className="text-sm font-medium text-ink">Add a sort</Text>
                 <Muted>Property</Muted>
                 <View className="flex-row flex-wrap gap-1">
                   {db.properties.map((property) => (

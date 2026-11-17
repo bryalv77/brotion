@@ -9,6 +9,7 @@ import {
   type TextInputProps,
   type ViewProps,
 } from "react-native";
+import { FileText } from "lucide-react-native";
 import { colors } from "@/lib/theme";
 
 export function Screen({
@@ -44,11 +45,11 @@ export function ScrollScreen({
 }
 
 export function H1({ children }: { children: React.ReactNode }) {
-  return <Text className="text-3xl font-bold text-ink">{children}</Text>;
+  return <Text className="text-3xl font-semibold text-ink">{children}</Text>;
 }
 
 export function H2({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <Text className={`text-xl font-semibold text-ink ${className}`}>{children}</Text>;
+  return <Text className={`text-xl font-medium text-ink ${className}`}>{children}</Text>;
 }
 
 export function Muted({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -126,7 +127,7 @@ export function EmptyState({
 }) {
   return (
     <View className="items-center justify-center gap-2 px-6 py-14">
-      <Text className="text-lg font-semibold text-ink">{title}</Text>
+      <Text className="text-lg font-medium text-ink">{title}</Text>
       {message ? <Muted className="text-center">{message}</Muted> : null}
       {action}
     </View>
@@ -138,6 +139,21 @@ export function ErrorBanner({ message }: { message: string | null }) {
   return (
     <View className="mb-4 rounded-lg bg-red-50 px-3 py-2">
       <Text className="text-sm text-danger">{message}</Text>
+    </View>
+  );
+}
+
+/** Fallback page icon, used when a page has no emoji. */
+export function PageGlyph({ size = 16 }: { size?: number }) {
+  return <FileText size={size} strokeWidth={1.5} color={colors.inkFaint} />;
+}
+
+export function Keycap({ children }: { children: React.ReactNode }) {
+  return (
+    <View className="rounded border border-border bg-white px-1">
+      <Text className="text-xs text-inkLight" style={{ fontVariant: ["tabular-nums"] }}>
+        {children}
+      </Text>
     </View>
   );
 }
@@ -158,7 +174,7 @@ export function Chip({
   return (
     <Pressable
       onPress={onPress}
-      className={`mr-2 rounded-full px-3 py-1.5 ${active ? "bg-accent" : "bg-surface-hover"}`}
+      className={`mr-2 rounded-lg px-3 py-2 ${active ? "bg-accent" : "bg-surface-hover"}`}
     >
       <Text className={`text-xs font-medium ${active ? "text-white" : "text-ink"}`}>{label}</Text>
     </Pressable>

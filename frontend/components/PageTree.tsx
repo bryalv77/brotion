@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react-native";
 import type { PageSummaryDTO } from "@notion-clone/shared";
 import { useChildPages } from "@/hooks/useChildPages";
 import { useCreatePage } from "@/hooks/useCreatePage";
 import { useToast } from "@/stores/toast";
+import { PageGlyph } from "@/components/ui";
+import { colors } from "@/lib/theme";
 
 interface PageTreeProps {
   workspaceId: string;
@@ -41,7 +44,7 @@ export function PageTree({ workspaceId, parentId = null, depth = 0 }: PageTreePr
     <View>
       <View className="mb-1 flex-row items-center justify-between px-2">
         {depth === 0 ? (
-          <Text className="text-xs font-medium uppercase tracking-wide text-inkFaint">
+          <Text className="text-xs text-inkFaint">
             Pages
           </Text>
         ) : (
@@ -55,7 +58,7 @@ export function PageTree({ workspaceId, parentId = null, depth = 0 }: PageTreePr
           hitSlop={8}
           className="h-6 w-6 items-center justify-center rounded active:bg-surface-hover"
         >
-          <Text className="text-lg leading-5 text-inkLight">+</Text>
+          <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
         </Pressable>
       </View>
 
@@ -118,7 +121,7 @@ function PageTreeNode({
     <View>
       <View
         className="flex-row items-center rounded-md py-1 pr-1"
-        style={{ paddingLeft: 6 + indent, backgroundColor: active ? "#e7e6e3" : "transparent" }}
+        style={{ paddingLeft: 6 + indent, backgroundColor: active ? colors.active : "transparent" }}
       >
         {page.has_children ? (
           <Pressable
@@ -128,7 +131,7 @@ function PageTreeNode({
             hitSlop={8}
             className="h-5 w-4 items-center justify-center"
           >
-            <Text className="text-xs text-inkFaint">{expanded ? "▾" : "▸"}</Text>
+            {expanded ? <ChevronDown size={14} strokeWidth={1.5} color={colors.inkFaint} /> : <ChevronRight size={14} strokeWidth={1.5} color={colors.inkFaint} />}
           </Pressable>
         ) : (
           <View className="h-5 w-4" />
@@ -137,12 +140,12 @@ function PageTreeNode({
         <Pressable
           onPress={() => router.push(`/(app)/page/${page.id}`)}
           accessibilityRole="button"
-          className="min-h-6 flex-1 flex-row items-center gap-1.5"
+          className="min-h-6 flex-1 flex-row items-center gap-2"
         >
-          <Text className="text-sm">{page.icon ?? "📄"}</Text>
+          {page.icon ? <Text className="text-sm">{page.icon}</Text> : <PageGlyph />}
           <Text
             numberOfLines={1}
-            className={`flex-1 text-sm ${active ? "font-semibold text-ink" : "text-ink"}`}
+            className={`flex-1 text-sm ${active ? "font-medium text-ink" : "text-ink"}`}
           >
             {page.title || "Untitled"}
           </Text>
@@ -156,7 +159,7 @@ function PageTreeNode({
           hitSlop={8}
           className="h-6 w-6 items-center justify-center rounded active:bg-surface-hover"
         >
-          <Text className="text-base leading-5 text-inkLight">+</Text>
+          <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
         </Pressable>
       </View>
 

@@ -14,6 +14,8 @@ import {
   readSelectOptions,
   stringList,
 } from "./helpers";
+import { Check } from "lucide-react-native";
+import { colors } from "@/lib/theme";
 
 interface CellEditorProps {
   databaseId: string;
@@ -155,7 +157,7 @@ export function CellEditor({
                     boolDraft ? "border-accent bg-accent" : "border-inkFaint bg-white"
                   }`}
                 >
-                  {boolDraft ? <Text className="text-white">✓</Text> : null}
+                  {boolDraft ? <Check size={16} strokeWidth={1.5} color="#fff" /> : null}
                 </View>
                 <Text className="text-base text-ink">
                   {boolDraft ? "Checked" : "Unchecked"}
@@ -183,7 +185,7 @@ export function CellEditor({
                         }`}
                       >
                         <Text className="text-sm text-ink">{option.value}</Text>
-                        {active ? <Text className="ml-auto text-ink">✓</Text> : null}
+                        {active ? <View className="ml-auto"><Check size={16} strokeWidth={1.5} color={colors.ink} /></View> : null}
                       </Pressable>
                     );
                   })

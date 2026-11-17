@@ -9,8 +9,10 @@ import {
 } from "react-native";
 import type { BlockDTO } from "@notion-clone/shared";
 import { colors } from "@/lib/theme";
+import { PageGlyph } from "@/components/ui";
 import { blockToText, richTextToPlainText, textRun } from "./blocks";
 import { SlashMenu, type BlockConversion } from "./SlashMenu";
+import { X } from "lucide-react-native";
 
 export interface BlockRowProps {
   block: BlockDTO;
@@ -28,9 +30,9 @@ export interface BlockRowProps {
 
 const TEXT_STYLES: Record<string, string> = {
   paragraph: "text-base text-ink",
-  heading1: "text-3xl font-bold text-ink",
-  heading2: "text-2xl font-semibold text-ink",
-  heading3: "text-xl font-semibold text-ink",
+  heading1: "text-3xl font-semibold text-ink",
+  heading2: "text-2xl font-medium text-ink",
+  heading3: "text-xl font-medium text-ink",
   bulleted_list_item: "text-base text-ink",
   numbered_list_item: "text-base text-ink",
   todo: "text-base text-ink",
@@ -111,7 +113,7 @@ export function BlockRow({
       onSubmitEditing={isCode ? undefined : () => onAddBelow(block.id)}
       multiline={isCode}
       numberOfLines={isCode ? 8 : 1}
-      placeholder={isCode ? "// code" : "Type something…"}
+      placeholder={isCode ? "// code" : "Type / for blocks"}
       placeholderTextColor={colors.inkFaint}
       className={`flex-1 py-1 ${TEXT_STYLES[block.type] ?? "text-base text-ink"}`}
       style={isCode ? { minHeight: 150, textAlignVertical: "top" } : undefined}
@@ -199,7 +201,7 @@ export function BlockRow({
     // tappable so a host screen can wire it up later.
     body = (
       <Pressable accessibilityRole="link" className="flex-row items-center gap-2 rounded-lg border border-border px-3 py-2">
-        <Text className="text-lg">{page?.icon ?? "📄"}</Text>
+        {page?.icon ? <Text className="text-lg">{page.icon}</Text> : <PageGlyph size={20} />}
         <Text className="flex-1 text-base text-accent">{page?.title ?? "Untitled"}</Text>
       </Pressable>
     );
@@ -227,7 +229,7 @@ export function BlockRow({
                   >
                     <Text
                       className={`text-sm text-ink ${
-                        table?.has_header_row && rowIndex === 0 ? "font-bold" : ""
+                        table?.has_header_row && rowIndex === 0 ? "font-medium" : ""
                       }`}
                     >
                       {richTextToPlainText(cells[colIndex])}
@@ -269,7 +271,7 @@ export function BlockRow({
 
   return (
     <View className="px-4 py-1">
-      <View className="flex-row items-start gap-1.5">
+      <View className="flex-row items-start gap-2">
         <Pressable
           onPress={() => setMenuVisible(true)}
           accessibilityRole="button"
@@ -286,13 +288,13 @@ export function BlockRow({
           hitSlop={8}
           className="px-1 pt-1"
         >
-          <Text className="text-sm text-inkFaint">×</Text>
+          <X size={16} strokeWidth={1.5} color={colors.inkFaint} />
         </Pressable>
       </View>
 
       {isCode ? (
         <Pressable onPress={() => onAddBelow(block.id)} className="ml-8 mt-1 self-start">
-          <Text className="text-xs text-accent">+ Add block below</Text>
+          <Text className="text-xs text-accent">Add block below</Text>
         </Pressable>
       ) : null}
 

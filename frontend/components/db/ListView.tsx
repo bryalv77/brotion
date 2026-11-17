@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 import type { DatabaseDTO, DatabaseRowDTO, PropertyDTO } from "@notion-clone/shared";
 import { CellEditor } from "./CellEditor";
+import { PageGlyph } from "@/components/ui";
 import {
   formatComputed,
   groupKeys,
@@ -54,7 +55,7 @@ export function ListView({
       {[...groups.entries()].map(([key, rows]) => (
         <View key={key}>
           <View className="mb-1 flex-row items-center gap-2">
-            <Text className="text-xs font-semibold uppercase text-inkLight">
+            <Text className="text-xs text-inkLight">
               {key === "__all__" ? "Rows" : groupLabel(key)}
             </Text>
             <Text className="text-xs text-inkFaint">{rows.length}</Text>
@@ -65,7 +66,7 @@ export function ListView({
                 key={`${key}-${row.page_id}`}
                 className="flex-row items-center gap-2 border-b border-border px-3 py-2 last:border-b-0"
               >
-                <Text className="text-lg">{db.icon ?? "📄"}</Text>
+                {db.icon ? <Text className="text-lg">{db.icon}</Text> : <PageGlyph size={20} />}
                 <View className="min-w-0 flex-1">
                   {primary ? (
                     <CellEditor

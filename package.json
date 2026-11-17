@@ -22,10 +22,7 @@
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "yarn workspaces run typecheck",
     "test:api": "yarn workspace frontend test:api",
-    "test:e2e": "yarn workspace frontend test:e2e",
-    "test:e2e:legacy": "cd frontend && playwright test --config legacy-web/playwright.config.ts",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down"
+    "test:e2e": "yarn workspace frontend test:e2e"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",

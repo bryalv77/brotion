@@ -12,6 +12,8 @@ import {
   rowValue,
   visibleProperties,
 } from "./helpers";
+import { X } from "lucide-react-native";
+import { colors } from "@/lib/theme";
 
 const NAME_COLUMN_WIDTH = 190;
 const COLUMN_WIDTH = 140;
@@ -55,7 +57,7 @@ export function TableView({
               style={{ width: property.id === primary?.id ? NAME_COLUMN_WIDTH : COLUMN_WIDTH }}
               className="border-r border-border px-2 py-2"
             >
-              <Text className="text-xs font-semibold text-ink" numberOfLines={1}>
+              <Text className="text-xs font-medium text-ink" numberOfLines={1}>
                 {property.name}
               </Text>
               <Text numberOfLines={1} className="text-xs text-inkLight">
@@ -102,7 +104,7 @@ export function TableView({
               accessibilityRole="button"
               className="w-10 items-center justify-center"
             >
-              <Text className="text-lg text-inkFaint">×</Text>
+              <X size={16} strokeWidth={1.5} color={colors.inkFaint} />
             </Pressable>
           </View>
         ))}

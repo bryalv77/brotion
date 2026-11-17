@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <Text className="text-xl text-ink">☰</Text>
         </Pressable>
-        <Text className="ml-3 text-base font-semibold text-ink">Notion</Text>
+        <Text className="ml-3 text-base font-medium text-ink">Notion</Text>
       </View>
 
       <View className="flex-1">{children}</View>

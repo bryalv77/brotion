@@ -1,6 +1,7 @@
 import { Platform, Pressable, Text, View } from "react-native";
 import { useToast } from "@/stores/toast";
 import { colors } from "@/lib/theme";
+import { X } from "lucide-react-native";
 
 /** Global toast overlay. Auto-dismiss is handled by the toast store. */
 export function Toaster() {
@@ -46,7 +47,7 @@ export function Toaster() {
             accessibilityLabel="Dismiss notification"
             hitSlop={8}
           >
-            <Text style={{ color: "rgba(255,255,255,0.8)", fontSize: 18 }}>×</Text>
+            <X size={16} strokeWidth={1.5} color="rgba(255,255,255,0.8)" />
           </Pressable>
         </View>
       ))}

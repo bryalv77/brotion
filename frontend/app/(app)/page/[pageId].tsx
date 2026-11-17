@@ -52,7 +52,7 @@ export default function PageScreen() {
   return (
     <ScrollView className="flex-1 bg-white" contentContainerClassName="mx-auto w-full max-w-3xl px-5 py-8">
       {breadcrumbs && breadcrumbs.length > 0 ? (
-        <View className="mb-3 flex-row flex-wrap items-center gap-1">
+        <View className="mb-4 flex-row flex-wrap items-center gap-1">
           {breadcrumbs.map((crumb, i) => (
             <Pressable
               key={crumb.id}
@@ -77,7 +77,7 @@ export default function PageScreen() {
           onBlur={commitTitle}
           onSubmitEditing={commitTitle}
           autoFocus
-          className="text-3xl font-bold"
+          className="text-3xl font-semibold"
         />
       ) : (
         <Pressable onPress={() => setEditingTitle(true)} accessibilityRole="button">

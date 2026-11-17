@@ -8,6 +8,8 @@ import { useSession } from "@/lib/session";
 import { createWorkspace } from "@/lib/data/workspaces";
 import { qk } from "@/lib/queryClient";
 import { useToast } from "@/stores/toast";
+import { Check, ChevronDown } from "lucide-react-native";
+import { colors } from "@/lib/theme";
 import { Button, Input } from "@/components/ui";
 
 /** Pull the workspace id out of a route like /(app)/workspace/abc or /workspace/abc. */
@@ -76,7 +78,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
         <Text numberOfLines={1} className="flex-1 text-sm font-medium text-ink">
           {current?.name ?? (isLoading ? "Loading…" : "Select workspace")}
         </Text>
-        <Text className="text-xs text-inkFaint">▾</Text>
+        <ChevronDown size={14} strokeWidth={1.5} color={colors.inkFaint} />
       </Pressable>
 
       <Modal
@@ -94,9 +96,9 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
           />
           <View
             className="w-full max-w-sm rounded-xl bg-white p-4"
-            style={{ maxWidth: 360, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 }}
+            style={{ maxWidth: 360, shadowColor: "#37352f", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 4 }}
           >
-            <Text className="mb-3 text-base font-semibold text-ink">Workspaces</Text>
+            <Text className="mb-3 text-base font-medium text-ink">Workspaces</Text>
 
             <ScrollView className="max-h-64">
               {isLoading ? (
@@ -117,7 +119,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
                     {ws.name}
                   </Text>
                   {ws.id === effectiveId ? (
-                    <Text className="text-sm text-accent">✓</Text>
+                    <Check size={16} strokeWidth={1.5} color={colors.accent} />
                   ) : null}
                 </Pressable>
               ))}
@@ -125,7 +127,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
 
             <View className="my-3 h-px bg-border" />
 
-            <Text className="mb-2 text-xs font-medium uppercase tracking-wide text-inkFaint">
+            <Text className="mb-2 text-xs text-inkFaint">
               New workspace
             </Text>
             <View className="flex-row items-center gap-2">
@@ -150,7 +152,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
                     router.push("/login");
                   }}
                 />
-                <Text className="px-1 py-1.5 text-center text-xs text-inkFaint">
+                <Text className="px-1 py-2 text-center text-xs text-inkFaint">
                   Notes are saved on this device. Sign in to sync them
                   everywhere — your local notes are uploaded automatically.
                 </Text>

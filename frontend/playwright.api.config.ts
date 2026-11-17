@@ -12,7 +12,7 @@ import path from "node:path";
 const BACKEND = process.env.E2E_BACKEND_URL || "http://127.0.0.1:4000";
 
 export default defineConfig({
-  testDir: "./legacy-web/tests/e2e",
+  testDir: "./tests/api",
   testMatch:
     /(auth|adopt|pages|collab|databases|sheets|import|export|templates|workspaces|images)\.spec\.ts$/,
   globalSetup: path.resolve(__dirname, "tests/e2e/global-setup.ts"),

@@ -4,9 +4,6 @@
  * Both `frontend/src/api` and `backend/src/modules/*` import from here so the
  * two sides can never drift. If a shape changes, change it HERE, then both
  * sides update via TypeScript.
- *
- * These types intentionally mirror `shared/contracts.md`. On any divergence,
- * this file is authoritative (it is what the compiler enforces).
  */
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ export const colors = {
   hover: "#efefed",
   active: "#e7e6e3",
   border: "#e9e9e7",
-  accent: "#2383e2",
+  accent: "#1a6fc4",
   danger: "#d44c47",
   success: "#0f9d58",
   warning: "#d9a23b",

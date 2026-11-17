@@ -1,6 +1,6 @@
 import { Text, useWindowDimensions, View } from "react-native";
 import type { DatabaseDTO } from "@notion-clone/shared";
-import { EmptyState } from "@/components/ui";
+import { EmptyState, PageGlyph } from "@/components/ui";
 import {
   colorFor,
   formatValue,
@@ -38,10 +38,10 @@ export function GalleryView({
           className="overflow-hidden rounded-xl border border-border bg-white"
         >
           <View className="h-24 items-center justify-center bg-surface-hover">
-            <Text className="text-4xl">{db.icon ?? "📄"}</Text>
+            {db.icon ? <Text className="text-4xl">{db.icon}</Text> : <PageGlyph size={32} />}
           </View>
           <View className="gap-1 p-3">
-            <Text numberOfLines={2} className="text-sm font-semibold text-ink">
+            <Text numberOfLines={2} className="text-sm font-medium text-ink">
               {primary
                 ? plainText(rowValue(row, primary.id)) || row.title || "Untitled"
                 : row.title || "Untitled"}
@@ -55,7 +55,7 @@ export function GalleryView({
                     <View className="flex-row flex-wrap gap-1">
                       {value.map((item, index) =>
                         typeof item === "string" ? (
-                          <View key={`${item}-${index}`} className={`rounded px-1 py-0.5 ${colorFor(item)}`}>
+                          <View key={`${item}-${index}`} className={`rounded px-1 py-1 ${colorFor(item)}`}>
                             <Text className="text-xs text-ink">{item}</Text>
                           </View>
                         ) : null,

@@ -1,7 +1,9 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Link } from "expo-router";
+import { Search, Trash2 } from "lucide-react-native";
+import { colors } from "@/lib/theme";
 import { useUI } from "@/stores/ui";
-import { Muted } from "@/components/ui";
+import { Keycap, Muted } from "@/components/ui";
 import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { PageTree } from "./PageTree";
 
@@ -23,9 +25,9 @@ export function Sidebar({ workspaceId }: { workspaceId?: string }) {
           hitSlop={4}
           className="flex-row items-center gap-2 rounded-md px-2 py-2 active:bg-surface-hover"
         >
-          <Text className="text-sm">🔍</Text>
+          <Search size={16} strokeWidth={1.5} color={colors.inkLight} />
           <Text className="flex-1 text-sm text-inkLight">Search</Text>
-          <Text className="text-xs text-inkFaint">⌘K</Text>
+          <Keycap>⌘K</Keycap>
         </Pressable>
       </View>
 
@@ -43,7 +45,7 @@ export function Sidebar({ workspaceId }: { workspaceId?: string }) {
             accessibilityRole="link"
             className="flex-row items-center gap-2 border-t border-border px-4 py-3 active:bg-surface-hover"
           >
-            <Text className="text-sm">🗑️</Text>
+            <Trash2 size={16} strokeWidth={1.5} color={colors.inkLight} />
             <Text className="text-sm text-inkLight">Trash</Text>
           </Pressable>
         </Link>
