@@ -3,7 +3,7 @@ import path from "node:path";
 
 /**
  * Backend-only E2E suite. The API specs from the archived Vite app are still
- * valid: they exercise the Express/Prisma backend through HTTP and need no
+ * valid: they exercise the Hono/Prisma backend through HTTP and need no
  * browser UI. Run with:
  *
  *   DATABASE_URL=postgresql://notion:notion@127.0.0.1:5433/notion_clone \
@@ -14,7 +14,7 @@ const BACKEND = process.env.E2E_BACKEND_URL || "http://127.0.0.1:4000";
 export default defineConfig({
   testDir: "./legacy-web/tests/e2e",
   testMatch:
-    /(auth|pages|collab|databases|sheets|import|export|templates|workspaces|images)\.spec\.ts$/,
+    /(auth|adopt|pages|collab|databases|sheets|import|export|templates|workspaces|images)\.spec\.ts$/,
   globalSetup: path.resolve(__dirname, "tests/e2e/global-setup.ts"),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

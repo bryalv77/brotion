@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { multipartRequest } from "@/lib/api/client";
+import { request } from "@/lib/api/client";
 import type { AttachmentDTO, PageDTO } from "@notion-clone/shared";
 
 /** Shape returned by expo-image-picker / expo-document-picker assets. */
@@ -37,7 +37,7 @@ export async function uploadImage(
   await appendAsset(form, "file", asset);
   if (opts?.pageId) form.append("page_id", opts.pageId);
   if (opts?.blockId) form.append("block_id", opts.blockId);
-  const res = await multipartRequest<{ attachment: AttachmentDTO }>("files", form);
+  const res = await request<{ attachment: AttachmentDTO }>("files", { method: "POST", body: form });
   return res.attachment;
 }
 
@@ -49,9 +49,9 @@ export async function importFile(
   const form = new FormData();
   await appendAsset(form, "file", asset);
   if (parentId) form.append("parent_id", parentId);
-  const res = await multipartRequest<{ page: PageDTO }>(
-    `workspaces/${workspaceId}/import`,
-    form,
-  );
+  const res = await request<{ page: PageDTO }>(`workspaces/${workspaceId}/import`, {
+    method: "POST",
+    body: form,
+  });
   return res.page;
 }

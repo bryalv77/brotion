@@ -11,15 +11,10 @@ import {
   plainText,
   primaryProperty,
   readSelectOptions,
-  rowValue,
+  rowValue, isGroupable,
 } from "./helpers";
 
 const COLUMN_WIDTH = 240;
-
-const isGroupable = (property: PropertyDTO): boolean =>
-  property.type === "select" ||
-  property.type === "status" ||
-  property.type === "multi_select";
 
 /** Kanban columns grouped by the view's group_by (or first select) property. */
 export function BoardView({

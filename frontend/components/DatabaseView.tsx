@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ViewType } from "@notion-clone/shared";
+import type { DatabaseDTO, DatabaseViewDTO, ViewType } from "@notion-clone/shared";
 import { addRow, createView, getDatabase } from "@/lib/data/databases";
 import { qk } from "@/lib/queryClient";
 import {
@@ -20,19 +20,64 @@ import { ListView } from "./db/ListView";
 import { TableView } from "./db/TableView";
 import { TemplatesModal } from "./db/TemplatesModal";
 
-const VIEW_TYPES: Array<{ type: ViewType; label: string; icon: string }> = [
-  { type: "table", label: "Table", icon: "▦" },
-  { type: "list", label: "List", icon: "☰" },
-  { type: "board", label: "Board", icon: "▤" },
-  { type: "gallery", label: "Gallery", icon: "▧" },
-];
+interface ViewProps {
+  db: DatabaseDTO;
+  view: DatabaseViewDTO | undefined;
+  hidden: string[];
+}
+
+const VIEWS: Record<
+  ViewType,
+  { label: string; icon: string; render: (p: ViewProps) => ReactNode }
+> = {
+  table: {
+    label: "Table",
+    icon: "▦",
+    render: ({ db, view, hidden }) => (
+      <TableView db={db} viewId={view?.id} hidden={hidden} />
+    ),
+  },
+  list: {
+    label: "List",
+    icon: "☰",
+    render: ({ db, view, hidden }) => (
+      <ListView
+        db={db}
+        viewId={view?.id}
+        hidden={hidden}
+        groupBy={view?.config.group_by}
+      />
+    ),
+  },
+  board: {
+    label: "Board",
+    icon: "▤",
+    render: ({ db, view }) =>
+      view ? (
+        <BoardView db={db} view={view} />
+      ) : (
+        <EmptyState title="No view" message="Create a board view to see grouped rows." />
+      ),
+  },
+  gallery: {
+    label: "Gallery",
+    icon: "▧",
+    render: ({ db, hidden }) => <GalleryView db={db} hidden={hidden} />,
+  },
+};
 
 /**
  * Native database shell: fetches the database with the active view applied,
  * shows the title, view switcher and add-row action, then delegates the body
  * to the renderer matching the selected view's type.
  */
-export function DatabaseView({ databaseId, viewId }: { databaseId: string; viewId?: string }) {
+export function DatabaseView({
+  databaseId,
+  viewId,
+}: {
+  databaseId: string;
+  viewId?: string;
+}) {
   const qc = useQueryClient();
   const [selectedViewId, setSelectedViewId] = useState<string | undefined>(viewId);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -56,9 +101,8 @@ export function DatabaseView({ databaseId, viewId }: { databaseId: string; viewI
   const hidden = activeView?.config.hidden ?? [];
 
   const invalidateDatabase = () => {
-    qc.invalidateQueries({ queryKey: qk.database(databaseId, selectedViewId) });
-    qc.invalidateQueries({ queryKey: ["database", databaseId] });
-    qc.invalidateQueries({ queryKey: ["page-databases"] });
+    qc.invalidateQueries({ queryKey: qk.databaseAnyView(databaseId) });
+    qc.invalidateQueries({ queryKey: qk.allPageDatabases });
   };
 
   const addRowMut = useMutation({
@@ -87,12 +131,16 @@ export function DatabaseView({ databaseId, viewId }: { databaseId: string; viewI
     return (
       <View className="gap-3 p-4">
         <ErrorBanner
-          message={error instanceof Error ? error.message : "Could not load this database"}
+          message={
+            error instanceof Error ? error.message : "Could not load this database"
+          }
         />
         <EmptyState
           title="Something went wrong"
           message="The database could not be loaded."
-          action={<Button title="Retry" variant="secondary" onPress={() => void refetch()} />}
+          action={
+            <Button title="Retry" variant="secondary" onPress={() => void refetch()} />
+          }
         />
       </View>
     );
@@ -129,14 +177,16 @@ export function DatabaseView({ databaseId, viewId }: { databaseId: string; viewI
       {/* View-type switcher */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View className="flex-row">
-          {VIEW_TYPES.map(({ type, label, icon }) => (
-            <Chip
-              key={type}
-              label={`${icon} ${label}`}
-              active={activeType === type}
-              onPress={() => activateType(type, label)}
-            />
-          ))}
+          {(Object.entries(VIEWS) as [ViewType, (typeof VIEWS)[ViewType]][]).map(
+            ([type, { label, icon }]) => (
+              <Chip
+                key={type}
+                label={`${icon} ${label}`}
+                active={activeType === type}
+                onPress={() => activateType(type, label)}
+              />
+            ),
+          )}
         </View>
       </ScrollView>
 
@@ -165,25 +215,7 @@ export function DatabaseView({ databaseId, viewId }: { databaseId: string; viewI
 
       <Divider />
 
-      {/* Body: one renderer per view type */}
-      {activeType === "list" ? (
-        <ListView
-          db={db}
-          viewId={activeView?.id}
-          hidden={hidden}
-          groupBy={activeView?.config.group_by}
-        />
-      ) : activeType === "board" ? (
-        activeView ? (
-          <BoardView db={db} view={activeView} />
-        ) : (
-          <EmptyState title="No view" message="Create a board view to see grouped rows." />
-        )
-      ) : activeType === "gallery" ? (
-        <GalleryView db={db} hidden={hidden} />
-      ) : (
-        <TableView db={db} viewId={activeView?.id} hidden={hidden} />
-      )}
+      {VIEWS[activeType].render({ db, view: activeView, hidden })}
 
       <TemplatesModal
         databaseId={databaseId}

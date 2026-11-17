@@ -1,16 +1,6 @@
-import type { SearchResultDTO } from "@notion-clone/shared";
+import * as api from "@/lib/api/search";
 import * as local from "./local/search";
-import { isLocalMode } from "./mode";
-import { request } from "@/lib/api/client";
+import { route } from "./mode";
 
-/** Repository seam over workspace search (local mode never hits the API). */
-export async function search(
-  workspaceId: string,
-  q: string,
-): Promise<SearchResultDTO[]> {
-  if (isLocalMode()) return local.search(workspaceId, q);
-  const data = await request<{ results: SearchResultDTO[] }>(
-    `workspaces/${workspaceId}/search?q=${encodeURIComponent(q)}`,
-  );
-  return data.results;
-}
+/** Guest → local store, signed-in user → API. */
+export const { search } = route<typeof api>(local, api);

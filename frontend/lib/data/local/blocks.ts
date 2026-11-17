@@ -1,7 +1,8 @@
 import type { BlockDTO, BlockType } from "@notion-clone/shared";
 import { getLocalStore } from "@/lib/local/store";
 import { newId } from "@/lib/local/ids";
-import { badRequest, computeOrder, notFound, type Anchor } from "./util";
+import { computeOrder, type Anchor } from "@notion-clone/shared";
+import { badRequest, notFound } from "./util";
 
 /** Local (guest) block operations. Mirrors lib/api/blocks.ts. */
 

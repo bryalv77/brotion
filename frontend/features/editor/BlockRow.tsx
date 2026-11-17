@@ -39,19 +39,6 @@ const TEXT_STYLES: Record<string, string> = {
   code: "text-sm font-mono text-ink",
 };
 
-const TEXT_TYPES = new Set([
-  "paragraph",
-  "heading1",
-  "heading2",
-  "heading3",
-  "bulleted_list_item",
-  "numbered_list_item",
-  "todo",
-  "quote",
-  "callout",
-  "code",
-]);
-
 export function BlockRow({
   block,
   listIndex,
@@ -320,5 +307,5 @@ export function BlockRow({
 
 /** Convenience for callers that only need to know if a row is text-bearing. */
 export function isTextType(type: string): boolean {
-  return TEXT_TYPES.has(type);
+  return type in TEXT_STYLES;
 }

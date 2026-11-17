@@ -11,6 +11,7 @@ import type {
 } from "@notion-clone/shared";
 import { updateView } from "@/lib/data/databases";
 import { qk } from "@/lib/queryClient";
+import { isGroupable } from "./helpers";
 import { Button, Chip, Divider, ErrorBanner, H2, Input, Muted } from "@/components/ui";
 
 const FILTER_OPS: FilterOp[] = [
@@ -26,11 +27,6 @@ const FILTER_OPS: FilterOp[] = [
   "any_of",
   "none_of",
 ];
-
-const isGroupable = (property: PropertyDTO): boolean =>
-  property.type === "select" ||
-  property.type === "status" ||
-  property.type === "multi_select";
 
 function filterValueText(value: Filter["value"]): string {
   if (value === null || value === undefined) return "";
@@ -71,8 +67,7 @@ export function FilterSortBar({
       return updateView(databaseId, viewId, { config: next });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.database(databaseId, viewId) });
-      qc.invalidateQueries({ queryKey: ["database", databaseId] });
+      qc.invalidateQueries({ queryKey: qk.databaseAnyView(databaseId) });
       setError(null);
     },
     onError: (err) =>

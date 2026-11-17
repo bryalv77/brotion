@@ -117,7 +117,7 @@ test.describe("import", () => {
     expect(attachments).toHaveLength(1);
     expect(attachments[0].file_name).toBe("attach-me.md");
     expect(attachments[0].mime_type).toBe("text/markdown");
-    expect(attachments[0].url).toMatch(/^\/api\/v1\/files\//);
+    expect(attachments[0].url).toMatch(/\/api\/v1\/files\/[\w-]+\.md$/);
   });
 
   test("DOCX inline marks (bold, italic) are preserved", async ({ request }) => {

@@ -1,7 +1,16 @@
 import {
+  aggregateRollup,
+  normalizeSelectOptions,
+  readFormulaSource,
+  safeCollectDependencies,
+  deriveSystemValue,
+  isComputedType,
+  isSystemType,
+  type SystemPropertyType,
+} from "@notion-clone/shared";
+import {
   applyViewConfig,
   detectCycle,
-  collectDependencies,
   evaluateCellCached,
   type ComputedCell,
   type DatabaseDTO,
@@ -25,61 +34,10 @@ import type { LocalPropertyValue } from "@/lib/local/store";
  * summaries, and view filtering (via shared applyViewConfig).
  */
 
-const SYSTEM_TYPES = new Set([
-  "created_time",
-  "created_by",
-  "last_edited_time",
-  "last_edited_by",
-]);
-const NON_DEFAULTABLE_TYPES = new Set<string>([
-  "formula",
-  "rollup",
-  ...SYSTEM_TYPES,
-]);
-
 async function requireDef(databaseId: string): Promise<LocalDatabaseDef> {
   const db = await getLocalStore().getDatabaseDef(databaseId);
   if (!db) throw notFound("Database not found.");
   return db;
-}
-
-function readFormulaSource(options: unknown): string {
-  if (
-    options !== null &&
-    typeof options === "object" &&
-    "formula" in options &&
-    typeof (options as { formula: unknown }).formula === "string"
-  ) {
-    return (options as { formula: string }).formula;
-  }
-  return "";
-}
-
-function safeCollectDependencies(source: string): string[] {
-  try {
-    return collectDependencies(source);
-  } catch {
-    return [];
-  }
-}
-
-/** Normalize select/multi_select/status options (mirrors the server). */
-function normalizeSelectOptions(type: string, options: unknown): unknown {
-  if (type !== "select" && type !== "multi_select" && type !== "status") {
-    return options ?? null;
-  }
-  if (
-    options &&
-    typeof options === "object" &&
-    "options" in options &&
-    Array.isArray((options as { options: unknown[] }).options)
-  ) {
-    const arr = (options as { options: unknown[] }).options.map((o) =>
-      typeof o === "string" ? { value: o } : (o as { value: string; color?: string }),
-    );
-    return { options: arr };
-  }
-  return { options: [] };
 }
 
 /** Live rows of a database, ordered like the server returns them. */
@@ -131,13 +89,12 @@ async function assembleRows(
 
     // Derived system properties (no stored rows, read off the page).
     const systemValues: LocalPropertyValue[] = [];
-    for (const sp of def.properties.filter((p) => SYSTEM_TYPES.has(p.type))) {
-      let derived: unknown = null;
-      if (sp.type === "created_time") derived = page.created_at;
-      else if (sp.type === "last_edited_time") derived = page.updated_at;
-      else if (sp.type === "created_by") derived = page.created_by;
-      else if (sp.type === "last_edited_by") derived = page.created_by;
-      if (!(sp.id in valuesByName)) {
+    for (const sp of def.properties.filter((p) => isSystemType(p.type))) {
+      const derived = deriveSystemValue(sp.type as SystemPropertyType, {
+        ...page,
+        last_updated_by: page.created_by,
+      });
+      if (!stored.some((v) => v.property_id === sp.id)) {
         valuesByName[sp.name] = derived;
         systemValues.push({
           id: `system-${sp.id}`,
@@ -198,7 +155,7 @@ async function assembleRows(
         const pv = await store.getValue(targetId, targetProp.id);
         targetValues.push(pv?.value ?? null);
       }
-      row.computed[rp.id] = aggregate(cfg.aggregation, targetValues);
+      row.computed[rp.id] = aggregateRollup(cfg.aggregation, targetValues);
     }
   }
   for (const rp of relationProps) {
@@ -223,33 +180,6 @@ async function assembleRows(
   }
 
   return assembled;
-}
-
-function aggregate(aggregation: string, values: unknown[]): ComputedCell {
-  const nums = values
-    .filter((v): v is number => typeof v === "number")
-    .sort((a, b) => a - b);
-  switch (aggregation) {
-    case "count":
-      return { status: "ok", value: values.length };
-    case "sum":
-      return { status: "ok", value: nums.reduce((a, b) => a + b, 0) };
-    case "avg":
-      return nums.length === 0
-        ? { status: "ok", value: null }
-        : { status: "ok", value: nums.reduce((a, b) => a + b, 0) / nums.length };
-    case "min":
-      return nums.length === 0 ? { status: "ok", value: null } : { status: "ok", value: nums[0] };
-    case "max":
-      return nums.length === 0 ? { status: "ok", value: null } : { status: "ok", value: nums[nums.length - 1] };
-    case "show_original":
-      return { status: "ok", value: values };
-    default:
-      return {
-        status: "error",
-        error: { code: "type", message: `Unknown rollup aggregation: ${aggregation}` },
-      };
-  }
 }
 
 function toRowDTO(row: AssembledRow): DatabaseRowDTO {
@@ -395,7 +325,7 @@ export async function addProperty(
     type: body.type,
     order: def.properties.length,
   };
-  const stored = normalizeSelectOptions(body.type, body.options);
+  const stored = normalizeSelectOptions(body.type, body.options) ?? null;
   if (stored !== null) prop.options = stored;
   await store.putDatabaseDef({ ...def, properties: [...def.properties, prop] });
   return prop;
@@ -561,7 +491,7 @@ export async function updatePropertyValue(
       "FORMULA_NOT_EDITABLE",
     );
   }
-  if (prop.type === "rollup" || SYSTEM_TYPES.has(prop.type)) {
+  if (prop.type === "rollup" || isSystemType(prop.type)) {
     throw badRequest(
       `${prop.type} values are derived and cannot be set directly.`,
       "SYSTEM_NOT_EDITABLE",
@@ -806,7 +736,7 @@ export async function updateTemplate(
           "UNKNOWN_PROPERTY",
         );
       }
-      if (NON_DEFAULTABLE_TYPES.has(prop.type)) {
+      if (isComputedType(prop.type)) {
         throw badRequest(
           `${prop.type} properties cannot have a default value.`,
           "NON_DEFAULTABLE_TYPE",

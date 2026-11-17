@@ -8,13 +8,8 @@ import {
   isReadOnlyType,
   primaryProperty,
   rowValue,
-  visibleProperties,
+  visibleProperties, isGroupable,
 } from "./helpers";
-
-const isGroupable = (property: PropertyDTO): boolean =>
-  property.type === "select" ||
-  property.type === "status" ||
-  property.type === "multi_select";
 
 /** Vertical list, loosely grouped by the view's group-by (or first select) property. */
 export function ListView({

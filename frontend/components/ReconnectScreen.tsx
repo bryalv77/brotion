@@ -12,17 +12,14 @@ export function ReconnectScreen({
   onRetry,
   onContinueLocal,
 }: {
-  onRetry: () => void;
+  onRetry: () => Promise<void>;
   onContinueLocal: () => void;
 }) {
   const [retrying, setRetrying] = useState(false);
 
   function retry() {
     setRetrying(true);
-    onRetry();
-    // If the retry fails the screen re-renders via the store; stop the
-    // spinner on the next tick so the buttons come back either way.
-    setTimeout(() => setRetrying(false), 1500);
+    void onRetry().finally(() => setRetrying(false));
   }
 
   return (

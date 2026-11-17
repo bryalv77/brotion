@@ -1,11 +1,10 @@
 import { create } from "zustand";
 import type { UserDTO } from "@notion-clone/shared";
 import * as authApi from "@/lib/api/auth";
-import { isUnauthorized } from "@/lib/api/client";
+import { isUnauthorized } from "@/lib/api/errors";
 import { queryClient } from "@/lib/queryClient";
 import { sessionFlag } from "@/lib/storage";
 import { getLocalStore } from "@/lib/local/store";
-import { ensureLocalSeeded } from "@/lib/local/seed";
 import { adoptLocalData } from "@/lib/merge";
 import { useToast } from "@/stores/toast";
 
@@ -39,8 +38,10 @@ interface SessionState {
   signOut: () => Promise<void>;
 }
 
-async function enterGuest(set: (partial: Partial<SessionState>) => void) {
-  await ensureLocalSeeded();
+function enterGuest(set: (partial: Partial<SessionState>) => void) {
+  // Note: the guest notebook is seeded by the (app) layout when it mounts in
+  // guest mode — visiting only /login or /register never writes local data,
+  // so signing in from a fresh browser merges nothing.
   set({ user: null, mode: "guest", offline: false });
 }
 
@@ -58,7 +59,7 @@ export const useSession = create<SessionState>((set, get) => ({
       // No remembered session on this device → straight into local mode.
       // A brand-new visitor never touches the network (offline-first boot).
       if (!(await sessionFlag.get())) {
-        await enterGuest(set);
+        enterGuest(set);
         return;
       }
 
@@ -77,7 +78,7 @@ export const useSession = create<SessionState>((set, get) => ({
           // Session expired/revoked — back to local mode.
           await authApi.logout().catch(() => undefined);
           await sessionFlag.clear();
-          await enterGuest(set);
+          enterGuest(set);
         } else {
           // Known user, server unreachable — offer reconnect vs. local mode.
           set({ user: null, mode: "user", offline: true });
@@ -97,7 +98,7 @@ export const useSession = create<SessionState>((set, get) => ({
   continueAsGuest: async () => {
     // Keep the remembered session flag: the next online boot restores the
     // account and adopts whatever is created locally in the meantime.
-    await enterGuest(set);
+    enterGuest(set);
     queryClient.clear();
   },
 
@@ -138,7 +139,7 @@ export const useSession = create<SessionState>((set, get) => ({
       // The store clears local state even if the network call fails.
     }
     await sessionFlag.clear();
-    await enterGuest(set);
+    enterGuest(set);
     queryClient.clear();
     set({ error: null });
   },

@@ -18,7 +18,7 @@ export default function TrashScreen() {
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: qk.trash(wsId) });
-    void qc.invalidateQueries({ queryKey: ["pages", "children"] });
+    void qc.invalidateQueries({ queryKey: qk.childPages });
   };
 
   const restore = async (id: string) => {

@@ -1,3 +1,4 @@
+import { qk } from "@/lib/queryClient";
 import { View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePageDatabases } from "@/hooks/usePageDatabases";
@@ -26,7 +27,7 @@ export function PageDatabases({ pageId }: { pageId: string }) {
         loading={create.isPending}
         onPress={async () => {
           await create.mutateAsync({ title: "Untitled" });
-          void qc.invalidateQueries({ queryKey: ["page-databases", pageId] });
+          void qc.invalidateQueries({ queryKey: qk.pageDatabases(pageId) });
         }}
       />
     </View>

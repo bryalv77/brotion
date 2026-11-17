@@ -33,8 +33,7 @@ export function TableView({
   const deleteMut = useMutation({
     mutationFn: (rowPageId: string) => deleteRow(rowPageId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.database(db.id, viewId) });
-      qc.invalidateQueries({ queryKey: ["database", db.id] });
+      qc.invalidateQueries({ queryKey: qk.databaseAnyView(db.id) });
     },
   });
 

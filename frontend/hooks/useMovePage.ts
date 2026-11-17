@@ -1,6 +1,7 @@
+import { qk } from "@/lib/queryClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { movePage } from "@/lib/data/pages";
-import { ApiClientError } from "@/lib/api/client";
+import { ApiClientError } from "@/lib/api/errors";
 import { useToast } from "@/stores/toast";
 
 /**
@@ -14,7 +15,7 @@ export function useMovePage() {
     mutationFn: ({ id, newParentId }: { id: string; newParentId: string | null }) =>
       movePage(id, newParentId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["pages", "children"] });
+      qc.invalidateQueries({ queryKey: qk.childPages });
     },
     onError: (err) => {
       showToast(err instanceof ApiClientError ? err.message : "Move failed");

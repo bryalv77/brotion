@@ -5,6 +5,7 @@ import type {
   NativeSessionTokens,
 } from "@notion-clone/shared";
 import { tokenStorage } from "../storage";
+import { ApiClientError, isUnauthorized } from "./errors";
 
 /**
  * Base URL for the API. Expo web and the native simulators can reach
@@ -18,25 +19,10 @@ const BASE = `${HOST}/api/v1`;
 
 const IS_WEB = Platform.OS === "web";
 
-/** Error thrown for every non-2xx API response. */
-export class ApiClientError extends Error {
-  readonly status: number;
-  readonly code: string;
-  constructor(message: string, status: number, code: string) {
-    super(message);
-    this.name = "ApiClientError";
-    this.status = status;
-    this.code = code;
-  }
-}
-
-export function isUnauthorized(err: unknown): boolean {
-  return err instanceof ApiClientError && err.status === 401;
-}
-
 async function rawRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    // FormData must not set Content-Type: the runtime adds the multipart boundary.
+    ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     // Required by the backend's CSRF guard for all mutations.
     "X-Requested-With": "XMLHttpRequest",
     ...(init?.headers as Record<string, string> | undefined),
@@ -84,7 +70,7 @@ async function rawRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /** Swap the refresh token for a fresh token pair. Returns false on failure. */
-export async function refreshSession(): Promise<boolean> {
+async function refreshSession(): Promise<boolean> {
   if (IS_WEB) {
     // Browser relies on the httpOnly refresh cookie; no local token to swap.
     try {
@@ -120,56 +106,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (err) {
     if (!isUnauthorized(err)) throw err;
     // Don't try to refresh the refresh endpoint itself — avoid loops.
-    if (path.startsWith("/auth/")) throw err;
+    if (path.replace(/^\//, "").startsWith("auth/")) throw err;
     if (!(await refreshSession())) throw err;
     return rawRequest<T>(path, init);
   }
-}
-
-/**
- * Multipart variant used by file upload / import. Deliberately does NOT set
- * Content-Type — React Native and the browser set the boundary themselves.
- */
-export async function multipartRequest<T>(
-  path: string,
-  form: FormData,
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "X-Requested-With": "XMLHttpRequest",
-  };
-  if (!IS_WEB) {
-    headers["X-Client-Platform"] = "native";
-    const tokens = await tokenStorage.get();
-    if (tokens) headers["Authorization"] = `Bearer ${tokens.accessToken}`;
-  }
-
-  const res = await fetch(`${BASE}/${path.replace(/^\//, "")}`, {
-    method: "POST",
-    headers,
-    credentials: IS_WEB ? "include" : "omit",
-    body: form,
-  });
-
-  const text = await res.text();
-  let body: unknown;
-  if (text) {
-    try {
-      body = JSON.parse(text);
-    } catch {
-      throw new Error(`Upload failed (status ${res.status})`);
-    }
-  }
-  if (!res.ok) {
-    const message =
-      (body as { error?: { message?: string } } | null)?.error?.message ??
-      `Upload failed (${res.status})`;
-    throw new Error(message);
-  }
-  const parsed = body as ApiResponse<T>;
-  if ("error" in parsed) {
-    throw new ApiClientError(parsed.error.message, res.status, parsed.error.code);
-  }
-  return parsed.data;
 }
 
 /** Extract native tokens from a login/register response and persist them. */

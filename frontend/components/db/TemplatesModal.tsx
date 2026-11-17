@@ -18,7 +18,7 @@ export function TemplatesModal({
 }) {
   const qc = useQueryClient();
   const { data: templates, isLoading } = useQuery({
-    queryKey: ["database-templates", databaseId],
+    queryKey: qk.databaseTemplates(databaseId),
     queryFn: () => listTemplates(databaseId),
     enabled: visible,
   });
@@ -27,8 +27,7 @@ export function TemplatesModal({
     mutationFn: (templateId?: string) =>
       addRow(databaseId, templateId ? { template_id: templateId } : {}),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.database(databaseId, viewId) });
-      qc.invalidateQueries({ queryKey: ["database", databaseId] });
+      qc.invalidateQueries({ queryKey: qk.databaseAnyView(databaseId) });
       onClose();
     },
   });

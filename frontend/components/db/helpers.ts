@@ -82,7 +82,6 @@ export function primaryProperty(properties: PropertyDTO[]): PropertyDTO | undefi
   return properties.find((p) => p.name === "Name") ?? properties[0];
 }
 
-/** Properties not hidden by the active view config. */
 export function visibleProperties(
   properties: PropertyDTO[],
   hidden: string[],
@@ -90,7 +89,6 @@ export function visibleProperties(
   return properties.filter((p) => !hidden.includes(p.name));
 }
 
-/** Raw stored value of a property on a row. */
 export function rowValue(row: DatabaseRowDTO, propertyId: string): unknown {
   return row.values.find((v) => v.property_id === propertyId)?.value;
 }
@@ -153,3 +151,9 @@ export function isReadOnlyType(type: PropertyType): boolean {
     type === "last_edited_by"
   );
 }
+
+/** Property types whose values can be used to group rows (board columns, list sections). */
+export const isGroupable = (property: PropertyDTO): boolean =>
+  property.type === "select" ||
+  property.type === "status" ||
+  property.type === "multi_select";

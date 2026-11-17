@@ -63,8 +63,7 @@ export function CellEditor({
     mutationFn: (next: unknown) =>
       updatePropertyValue(rowPageId, property.id, next),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.database(databaseId, viewId) });
-      qc.invalidateQueries({ queryKey: ["database", databaseId] });
+      qc.invalidateQueries({ queryKey: qk.databaseAnyView(databaseId) });
       setOpen(false);
     },
     onError: (err) =>

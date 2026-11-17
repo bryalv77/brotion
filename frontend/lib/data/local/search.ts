@@ -1,6 +1,6 @@
 import type { SearchResultDTO } from "@notion-clone/shared";
 import { getLocalStore } from "@/lib/local/store";
-import { blockText } from "./util";
+import { extractText } from "@notion-clone/shared";
 
 /**
  * Local (guest) search: case-insensitive title + block-text matching over
@@ -25,7 +25,7 @@ export async function search(
     if (!titleHit) {
       const blocks = await store.listBlocks(page.id);
       for (const b of blocks) {
-        const text = blockText(b.content);
+        const text = extractText(b.content);
         const idx = text.toLowerCase().indexOf(needle);
         if (idx !== -1) {
           snippet = text.slice(Math.max(0, idx - 30), idx + 90).trim();

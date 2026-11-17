@@ -42,7 +42,7 @@ test.describe("page export", () => {
     expect(res.headers()["content-type"]).toContain("application/pdf");
 
     const body = await res.body();
-    expect(body.length).toBeGreaterThan(1000);
+    expect(body.subarray(0, 5).toString()).toBe("%PDF-");
   });
 
   test("invalid format → 400", async ({ request }) => {

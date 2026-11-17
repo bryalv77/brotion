@@ -1,4 +1,3 @@
-import { Platform } from "react-native";
 import type {
   BlockDTO,
   DatabaseViewDTO,
@@ -8,8 +7,7 @@ import type {
   WorkspaceDTO,
 } from "@notion-clone/shared";
 import type { KV } from "./kvTypes";
-import { openIdbKV } from "./idb";
-import { openSqliteKV } from "./sqlite";
+import { getLocalKV } from "./kv";
 
 /**
  * Typed persistence layer for guest (local) mode. Entities are the exact API
@@ -71,8 +69,7 @@ let singleton: LocalStore | null = null;
 /** The process-wide local store (lazily picks the platform adapter). */
 export function getLocalStore(): LocalStore {
   if (!singleton) {
-    const kv = Platform.OS === "web" ? openIdbKV() : openSqliteKV();
-    singleton = new LocalStore(kv);
+    singleton = new LocalStore(getLocalKV());
   }
   return singleton;
 }
