@@ -8,7 +8,7 @@ import {
   gapTooSmall,
   renormalize,
   type Anchor,
-} from "./order.js";
+} from "@notion-clone/shared";
 import { badRequest, notFound, unprocessableEntity } from "../../utils/errors.js";
 
 /**

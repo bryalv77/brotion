@@ -1,12 +1,5 @@
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import type { Page, Block } from "@prisma/client";
-
-/**
- * Page export: Markdown + PDF.
- *
- * Markdown is pure TS (no deps). PDF uses Puppeteer to render styled HTML.
- */
-
-// ── Markdown ─────────────────────────────────────────────────────────────────
 
 export function toMarkdown(page: Page, blocks: Block[]): string {
   const lines: string[] = [];
@@ -73,96 +66,69 @@ function richTextToMd(runs: unknown[]): string {
     .join("");
 }
 
-// ── HTML (for PDF) ────────────────────────────────────────────────────────────
-
-export function toHtml(page: Page, blocks: Block[]): string {
-  const body = blocks.map(blockToHtml).join("\n");
-  const title = page.title || "Untitled";
-  const icon = page.icon ? `${page.icon} ` : "";
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 720px; margin: 0 auto; padding: 48px; color: #1a1a1a; line-height: 1.6; }
-  h1 { font-size: 2em; font-weight: 700; margin-bottom: 0.5em; }
-  h2 { font-size: 1.5em; font-weight: 700; margin-top: 1.5em; }
-  h3 { font-size: 1.25em; font-weight: 600; margin-top: 1em; }
-  ul, ol { padding-left: 1.5em; }
-  li { margin: 0.25em 0; }
-  blockquote { border-left: 3px solid #e5e5e5; padding-left: 1em; color: #6b7280; font-style: italic; margin: 0.5em 0; }
-  pre { background: #1f2937; color: #f9fafb; border-radius: 8px; padding: 12px 16px; font-family: 'SF Mono', Monaco, monospace; font-size: 14px; overflow-x: auto; }
-  code { background: #f3f4f6; border-radius: 4px; padding: 2px 6px; font-family: 'SF Mono', Monaco, monospace; font-size: 0.875em; }
-  hr { border: none; border-top: 1px solid #e5e5e5; margin: 1em 0; }
-</style>
-</head>
-<body>
-<h1>${icon}${escapeHtml(title)}</h1>
-${body}
-</body>
-</html>`;
-}
-
-function blockToHtml(block: Block): string {
-  const c = block.content as Record<string, unknown>;
-  const richText = Array.isArray(c.rich_text) ? c.rich_text : [];
-  const text = richTextToHtml(richText);
-
-  switch (block.type) {
-    case "heading1": return `<h1>${text}</h1>`;
-    case "heading2": return `<h2>${text}</h2>`;
-    case "heading3": return `<h3>${text}</h3>`;
-    case "bulleted_list_item": return `<ul><li>${text}</li></ul>`;
-    case "numbered_list_item": return `<ol><li>${text}</li></ol>`;
-    case "todo":
-      return `<ul><li style="list-style:none">${c.checked ? "☑" : "☐"} ${text}</li></ul>`;
-    case "quote": return `<blockquote>${text}</blockquote>`;
-    case "callout": return `<blockquote>${c.icon ?? "💡"} ${text}</blockquote>`;
-    case "code":
-      return `<pre><code>${escapeHtml(String(c.text ?? ""))}</code></pre>`;
-    case "divider": return `<hr>`;
-    default: return `<p>${text}</p>`;
+/** Extract readable text from a block (rich_text runs, or code block text). */
+function blockPlainText(block: Block): string {
+  const content = block.content as Record<string, unknown>;
+  if (typeof content.text === "string" && content.text.trim()) {
+    return content.text;
   }
-}
-
-function richTextToHtml(runs: unknown[]): string {
-  return runs
-    .map((run) => {
-      const r = run as Record<string, unknown>;
-      let text = escapeHtml(String(r.text ?? ""));
-      const marks = Array.isArray(r.marks) ? (r.marks as string[]) : [];
-      if (marks.includes("bold")) text = `<strong>${text}</strong>`;
-      if (marks.includes("italic")) text = `<em>${text}</em>`;
-      if (marks.includes("code")) text = `<code>${text}</code>`;
-      return text;
-    })
+  const richText = Array.isArray(content.rich_text) ? content.rich_text : [];
+  return richText
+    .map((run) => String((run as Record<string, unknown>).text ?? ""))
     .join("");
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+/** Helvetica (WinAnsi) cannot encode arbitrary Unicode — keep printable ASCII. */
+function sanitize(text: string): string {
+  return text.replace(/[^\x20-\x7E]/g, "?").trim();
 }
 
-// ── PDF ──────────────────────────────────────────────────────────────────────
+/** Build a minimal, valid multi-page PDF with the title and block text. */
+export async function toPdf(page: Page, blocks: Block[]): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-export async function toPdf(page: Page, blocks: Block[]): Promise<Buffer> {
-  const html = toHtml(page, blocks);
-  const puppeteer = await import("puppeteer");
-  const browser = await puppeteer.default.launch({ headless: true });
-  try {
-    const pg = await browser.newPage();
-    await pg.setContent(html, { waitUntil: "load" });
-    const pdf = await pg.pdf({
-      format: "A4",
-      margin: { top: "1in", bottom: "1in", left: "1in", right: "1in" },
-      printBackground: true,
-    });
-    return Buffer.from(pdf);
-  } finally {
-    await browser.close();
+  let pdfPage = pdfDoc.addPage();
+  let { width, height } = pdfPage.getSize();
+  const margin = 50;
+  let y = height - margin;
+
+  const newPageIfNeeded = (size: number) => {
+    if (y >= margin + size) return;
+    pdfPage = pdfDoc.addPage();
+    ({ width, height } = pdfPage.getSize());
+    y = height - margin;
+  };
+
+  const draw = (rawText: string, size: number) => {
+    const text = sanitize(rawText);
+    if (!text) return;
+
+    const maxWidth = width - margin * 2;
+    let line = "";
+    for (const word of text.split(/\s+/)) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, size) > maxWidth && line) {
+        newPageIfNeeded(size);
+        pdfPage.drawText(line, { x: margin, y, size, font });
+        y -= size * 1.4;
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) {
+      newPageIfNeeded(size);
+      pdfPage.drawText(line, { x: margin, y, size, font });
+      y -= size * 1.4;
+    }
+  };
+
+  draw(page.title || "Untitled", 20);
+  y -= 10;
+  for (const block of blocks) {
+    draw(blockPlainText(block), 12);
   }
+
+  return pdfDoc.save();
 }

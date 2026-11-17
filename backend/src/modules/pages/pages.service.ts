@@ -1,3 +1,4 @@
+import { extractText } from "@notion-clone/shared";
 import type { Prisma } from "@prisma/client";
 import type { PageSummaryDTO } from "@notion-clone/shared";
 import { getPrisma } from "../../prisma/client.js";
@@ -191,13 +192,10 @@ export async function permanentDeletePage(pageId: string, userId: string) {
   // Collect the whole subtree (BFS) to delete bottom-up.
   const ids = await collectSubtreeIds(page.id);
   await getPrisma().$transaction(async (tx) => {
-    // Delete blocks first (cascade would also work, but be explicit + safe).
     await tx.block.deleteMany({ where: { page_id: { in: ids } } });
-    // Delete pages leaf-first to satisfy the self-FK NO ACTION.
+    // Leaf-first to satisfy the self-FK NO ACTION.
     for (const id of [...ids].reverse()) {
-      await tx.page.delete({ where: { id } }).catch(() => {
-        /* ignore rows already gone */
-      });
+      await tx.page.deleteMany({ where: { id } });
     }
   });
 }
@@ -289,33 +287,6 @@ async function collectSubtreeIds(rootId: string): Promise<string[]> {
     queue.push(...children.map((c) => c.id));
   }
   return ids;
-}
-
-/** Extract searchable plain text from a block's content JSON. */
-export function extractText(content: unknown): string {
-  if (typeof content !== "object" || content === null) return "";
-  const c = content as Record<string, unknown>;
-  if (typeof c.text === "string") return c.text; // code blocks
-  if (Array.isArray(c.rich_text)) {
-    return extractRichText(c.rich_text);
-  }
-  if (Array.isArray(c.cells)) {
-    // table_row: one RichText[] per column.
-    return (c.cells as unknown[])
-      .map((cell) => (Array.isArray(cell) ? extractRichText(cell) : ""))
-      .join(" ");
-  }
-  return "";
-}
-
-function extractRichText(runs: unknown[]): string {
-  return runs
-    .map((r) =>
-      typeof r === "object" && r !== null && "text" in r
-        ? String((r as Record<string, unknown>).text ?? "")
-        : "",
-    )
-    .join(" ");
 }
 
 // Guard import to avoid unused warning when not used directly in this file.

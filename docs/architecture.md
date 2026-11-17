@@ -17,7 +17,7 @@ This document summarizes the system architecture. Authoritative detail lives in
                 │  REST over HTTP  (/api/v1)         │ socket.io (Task 4, optional)
                 ▼                                    ▼
 ┌──────────────────────────────────────┐   ┌────────────────────────┐
-│  Backend: Node.js + Express + TS     │   │  socket.io gateway     │
+│  Backend: Hono + TS (Node / Workers)     │   │  socket.io gateway     │
 │  - Auth middleware (JWT cookie)      │◄──┤  (real-time presence,  │
 │  - Route controllers                 │   │   block sync — opt-in) │
 │  - Service layer (business rules)    │   └────────────────────────┘
@@ -63,7 +63,7 @@ Key choices:
 ```
 notion-clone/
 ├── frontend/            # Vite + React + TS + Tailwind
-├── backend/             # Express + TS + Prisma
+├── backend/             # Hono + TS + Prisma
 ├── shared/              # API + block contracts (single source of truth)
 ├── docs/                # architecture + ADRs
 ├── specs/               # SDD specs (constitution, README, per-feature folders)

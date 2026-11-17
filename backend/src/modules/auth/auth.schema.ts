@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Request-body schemas for auth. Validated at the controller boundary; the
+ * Request-body schemas for auth. Validated at the route boundary; the
  * centralized error middleware maps ZodError → 400 envelope.
  */
 export const registerSchema = z.object({

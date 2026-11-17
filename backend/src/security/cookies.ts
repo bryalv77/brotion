@@ -1,4 +1,3 @@
-import type { CookieOptions } from "express";
 import { env } from "../config/env.js";
 
 /**
@@ -12,6 +11,15 @@ import { env } from "../config/env.js";
 const ACCESS_TTL_SECONDS = parseTtlToSeconds(env.JWT_ACCESS_TTL);
 const REFRESH_TTL_SECONDS = env.JWT_REFRESH_TTL_DAYS * 24 * 60 * 60;
 
+interface CookieOptions {
+  httpOnly?: boolean;
+  sameSite: "none" | "lax" | "strict";
+  secure: boolean;
+  path: string;
+  /** Milliseconds. */
+  maxAge?: number;
+}
+
 const baseOptions = (): CookieOptions => ({
   httpOnly: true,
   // Pages and Workers live on different sites, so production cookies must be
@@ -20,6 +28,12 @@ const baseOptions = (): CookieOptions => ({
   secure: env.COOKIE_SECURE === "true",
   path: "/",
 });
+
+/** Options a browser needs to match when deleting a cookie set with `baseOptions`. */
+export function clearCookieOptions(): CookieOptions {
+  const { httpOnly: _h, ...rest } = baseOptions();
+  return rest;
+}
 
 export function accessCookieOptions(): CookieOptions {
   return { ...baseOptions(), maxAge: ACCESS_TTL_SECONDS * 1000 };

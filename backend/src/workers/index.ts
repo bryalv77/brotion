@@ -4,8 +4,9 @@ import { Pool } from "@neondatabase/serverless";
 import type { Env } from "./env.js";
 import { initWorkerEnv } from "./env.js";
 import { runWithPrisma } from "../prisma/client.js";
-import type { AppEnv } from "./types.js";
+import type { AppEnv } from "../http/types.js";
 import type { Hono } from "hono";
+import { logger } from "../config/logger.js";
 
 /**
  * Cloudflare Workers entrypoint. Bindings are copied into process.env before
@@ -17,12 +18,11 @@ let appPromise: Promise<Hono<AppEnv>> | null = null;
 
 export default {
   async fetch(request: Request, bindings: Env, ctx: ExecutionContext): Promise<Response> {
-    process.env.WORKERS = "1";
     initWorkerEnv(bindings);
 
     if (!appPromise) {
-      appPromise = import("./app.js").then(({ createWorkerApp }) =>
-        createWorkerApp(bindings),
+      appPromise = import("../http/app.js").then(({ createApp }) =>
+        createApp(bindings),
       );
     }
     const app = await appPromise;
@@ -38,9 +38,8 @@ export default {
     ctx.waitUntil(
       prisma
         .$disconnect()
-        .catch(() => undefined)
         .finally(() => pool.end())
-        .catch(() => undefined),
+        .catch((err) => logger.warn({ err }, "Request DB cleanup failed")),
     );
 
     return response;

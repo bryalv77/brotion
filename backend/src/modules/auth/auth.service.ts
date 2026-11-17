@@ -1,4 +1,3 @@
-import type { Response } from "express";
 import type { User } from "@prisma/client";
 import type { UserDTO } from "@notion-clone/shared";
 
@@ -10,12 +9,6 @@ import {
   verifyRefreshToken,
 } from "../../security/tokens.js";
 import { signAccessToken } from "../../security/jwt.js";
-import {
-  ACCESS_COOKIE,
-  REFRESH_COOKIE,
-  accessCookieOptions,
-  refreshCookieOptions,
-} from "../../security/cookies.js";
 import { env } from "../../config/env.js";
 import {
   createUser,
@@ -26,7 +19,7 @@ import { toUserDTO } from "../users/users.dto.js";
 import { conflict, unauthorized } from "../../utils/errors.js";
 
 /**
- * Auth business rules. Controllers stay thin: validate input, call these, then
+ * Auth business rules. Route handlers stay thin: validate input, call these, then
  * shape the HTTP response via the `ok`/`created`/`noContent` helpers.
  */
 
@@ -41,8 +34,8 @@ export interface IssuedSession {
   refreshToken: string;
 }
 
-/** Mint access JWT + create a Session row, set both cookies on the response. */
-async function issueSession(res: Response, user: User): Promise<IssuedSession> {
+/** Mint access JWT + create a Session row; the HTTP layer sets the cookies. */
+async function issueSession(user: User): Promise<IssuedSession> {
   const accessToken = await signAccessToken(user.id);
   const refreshToken = generateRefreshToken();
   const refreshHash = await hashRefreshToken(refreshToken);
@@ -58,14 +51,10 @@ async function issueSession(res: Response, user: User): Promise<IssuedSession> {
     },
   });
 
-  res.cookie(ACCESS_COOKIE, accessToken, accessCookieOptions());
-  res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions());
-
   return { user: toUserDTO(user), accessToken, refreshToken };
 }
 
 export async function register(
-  res: Response,
   input: { email: string; password: string; name?: string },
 ): Promise<IssuedSession> {
   const existing = await findUserByEmail(input.email);
@@ -78,11 +67,10 @@ export async function register(
     passwordHash,
     name: input.name,
   });
-  return issueSession(res, user);
+  return issueSession(user);
 }
 
 export async function login(
-  res: Response,
   input: { email: string; password: string },
 ): Promise<IssuedSession> {
   // Deliberately identical message for unknown-email vs wrong-password.
@@ -94,7 +82,7 @@ export async function login(
   if (!valid) {
     throw unauthorized("Invalid email or password.");
   }
-  return issueSession(res, user);
+  return issueSession(user);
 }
 
 export interface RefreshResult extends IssuedSession {
@@ -107,11 +95,11 @@ export interface RefreshResult extends IssuedSession {
  * issued. If the presented token matches a session already revoked, we treat it
  * as invalid (possible theft) → 401 + clear cookie.
  */
-export async function refresh(res: Response, rawToken?: string): Promise<RefreshResult> {
+export async function refresh(rawToken?: string): Promise<RefreshResult> {
   if (!rawToken) throw unauthorized();
 
   // Look up the active session whose stored hash verifies against the token.
-  // We search by candidate rows that are not expired, then argon2-verify.
+  // We search by candidate rows that are not expired, then verify the hash.
   const candidates = await getPrisma().session.findMany({
     where: {
       expires_at: { gt: new Date() },
@@ -135,11 +123,11 @@ export async function refresh(res: Response, rawToken?: string): Promise<Refresh
     data: { revoked_at: new Date() },
   });
 
-  const session = await issueSession(res, matched.user);
+  const session = await issueSession(matched.user);
   return { ...session, rotated: true };
 }
 
-export async function logout(res: Response, rawToken?: string): Promise<void> {
+export async function logout(rawToken?: string): Promise<void> {
   // Best-effort revoke; always succeeds (idempotent logout).
   if (rawToken) {
     const candidates = await getPrisma().session.findMany({
@@ -155,8 +143,6 @@ export async function logout(res: Response, rawToken?: string): Promise<void> {
       }
     }
   }
-  res.clearCookie(ACCESS_COOKIE, { path: "/" });
-  res.clearCookie(REFRESH_COOKIE, { path: "/" });
 }
 
 export async function getCurrentUser(userId: string): Promise<UserDTO> {

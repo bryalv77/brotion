@@ -1,3 +1,4 @@
+import { isComputedType } from "@notion-clone/shared";
 import type { Prisma } from "@prisma/client";
 import { getPrisma } from "../../prisma/client.js";
 import { getAccessiblePage } from "../auth/permissions.service.js";
@@ -17,16 +18,6 @@ import { badRequest, notFound } from "../../utils/errors.js";
  * cannot be set, mirroring updatePropertyValue's SYSTEM_NOT_EDITABLE /
  * FORMULA_NOT_EDITABLE guards.
  */
-
-/** Property types that cannot carry a stored default (derived / computed). */
-const NON_DEFAULTABLE_TYPES = new Set([
-  "formula",
-  "rollup",
-  "created_time",
-  "created_by",
-  "last_edited_time",
-  "last_edited_by",
-]);
 
 /** Load a database row + enforce EDITOR access via its hosting page. */
 async function loadDbForEdit(databaseId: string, userId: string) {
@@ -196,9 +187,7 @@ export async function deleteTemplate(templateId: string, userId: string): Promis
   await getPrisma().$transaction(async (tx) => {
     // Delete the template first, then its body page (cascade removes blocks).
     await tx.template.delete({ where: { id: templateId } });
-    await tx.page.delete({ where: { id: template.page_id } }).catch(() => {
-      /* page already gone — ignore */
-    });
+    await tx.page.deleteMany({ where: { id: template.page_id } });
   });
 }
 
@@ -224,7 +213,7 @@ async function normalizeDefaultValues(
         { code: "UNKNOWN_PROPERTY" },
       );
     }
-    if (NON_DEFAULTABLE_TYPES.has(prop.type)) {
+    if (isComputedType(prop.type)) {
       throw badRequest(
         `${prop.type} properties cannot have a default value.`,
         { code: "NON_DEFAULTABLE_TYPE" },

@@ -1,6 +1,6 @@
 import { getPrisma } from "../../prisma/client.js";
 import { getAccessiblePage } from "../auth/permissions.service.js";
-import { applyViewConfig, type ViewRow } from "@notion-clone/shared";
+import { normalizeSelectOptions, readFormulaSource, safeCollectDependencies, aggregateRollup, applyViewConfig, deriveSystemValue, isSystemType, type SystemPropertyType, type ViewRow } from "@notion-clone/shared";
 import { toDatabaseDTO } from "./databases.dto.js";
 import { badRequest, notFound } from "../../utils/errors.js";
 import {
@@ -8,7 +8,6 @@ import {
   resolveTemplateForNewRow,
 } from "./templates.service.js";
 import {
-  collectDependencies,
   detectCycle,
   evaluateCell,
   evaluateCellCached,
@@ -156,20 +155,11 @@ export async function getDatabase(
   // Inject derived values for system-type properties (created_time/by,
   // last_edited_time/by). These are read straight off the row page — no
   // PropertyValue rows are stored for them.
-  const systemProps = db.properties.filter((p) =>
-    p.type === "created_time" ||
-    p.type === "created_by" ||
-    p.type === "last_edited_time" ||
-    p.type === "last_edited_by",
-  );
+  const systemProps = db.properties.filter((p) => isSystemType(p.type));
   if (systemProps.length > 0) {
     for (const row of rows) {
       for (const sp of systemProps) {
-        let derived: unknown = null;
-        if (sp.type === "created_time") derived = row.created_at.toISOString();
-        else if (sp.type === "last_edited_time") derived = row.updated_at.toISOString();
-        else if (sp.type === "created_by") derived = row.created_by;
-        else if (sp.type === "last_edited_by") derived = row.last_updated_by;
+        const derived = deriveSystemValue(sp.type as SystemPropertyType, row);
         // Only inject if no stored value exists.
         const has = row.property_values.some((v) => v.property_id === sp.id);
         if (!has) {
@@ -226,7 +216,7 @@ export async function getDatabase(
           for (const v of vals) targetValues.push(v.value);
         }
         computed[row.id] = computed[row.id] ?? {};
-        computed[row.id][rp.id] = aggregate(cfg.aggregation, targetValues);
+        computed[row.id][rp.id] = aggregateRollup(cfg.aggregation, targetValues);
       }
     }
 
@@ -510,31 +500,6 @@ export async function moveProperty(
 
 // ── Properties ─────────────────────────────────────────────────────────────
 
-/**
- * Normalize select/multi_select/status options into the structured
- * `{ options: [{ value, color? }] }` shape, tolerating the legacy `string[]`.
- */
-function normalizeSelectOptions(
-  type: string,
-  options: unknown,
-): unknown {
-  if (type !== "select" && type !== "multi_select" && type !== "status") {
-    return options;
-  }
-  if (
-    options &&
-    typeof options === "object" &&
-    "options" in options &&
-    Array.isArray((options as { options: unknown[] }).options)
-  ) {
-    const arr = (options as { options: unknown[] }).options.map((o) =>
-      typeof o === "string" ? { value: o } : (o as { value: string; color?: string }),
-    );
-    return { options: arr };
-  }
-  return { options: [] };
-}
-
 /** Add a property (column) to a database. */
 export async function addProperty(
   databaseId: string,
@@ -679,31 +644,6 @@ export async function updateProperty(
     },
   });
   return updated;
-}
-
-function readFormulaSource(options: unknown): string {
-  if (
-    options !== null &&
-    typeof options === "object" &&
-    "formula" in options &&
-    typeof (options as { formula: unknown }).formula === "string"
-  ) {
-    return (options as { formula: string }).formula;
-  }
-  return "";
-}
-
-/**
- * Like `collectDependencies` but returns `[]` if the formula doesn't parse.
- * Used at write time so a bad source doesn't block column creation — the
- * engine will surface the parse error per-cell when the row is evaluated.
- */
-function safeCollectDependencies(source: string): string[] {
-  try {
-    return collectDependencies(source);
-  } catch {
-    return [];
-  }
 }
 
 // ── Rows + values ──────────────────────────────────────────────────────────
@@ -906,13 +846,7 @@ export async function updatePropertyValue(
 
   // System types (created_*, last_edited_*) are derived from the row page and
   // cannot be written directly. Rollup is computed through a relation.
-  if (
-    property.type === "created_time" ||
-    property.type === "created_by" ||
-    property.type === "last_edited_time" ||
-    property.type === "last_edited_by" ||
-    property.type === "rollup"
-  ) {
+  if (isSystemType(property.type) || property.type === "rollup") {
     throw badRequest(`${property.type} values are derived and cannot be set directly.`, {
       code: "SYSTEM_NOT_EDITABLE",
     });
@@ -1147,41 +1081,4 @@ async function loadAllValuesByName(
     if (prop) out[prop.name].push(v.value);
   }
   return out;
-}
-
-/**
- * Aggregate a list of raw property values for a rollup. Mirrors the formula
- * engine's aggregation semantics but applied to a pre-resolved value list
- * (the related rows' target-property values).
- */
-function aggregate(
-  aggregation: string,
-  values: unknown[],
-): ComputedCell {
-  const nums = values
-    .filter((v) => typeof v === "number")
-    .sort((a, b) => (a as number) - (b as number));
-  switch (aggregation) {
-    case "count":
-      return { status: "ok", value: values.length };
-    case "sum":
-      return { status: "ok", value: nums.reduce((a, b) => a + (b as number), 0) };
-    case "avg":
-      return nums.length === 0
-        ? { status: "ok", value: null }
-        : { status: "ok", value: nums.reduce((a, b) => a + (b as number), 0) / nums.length };
-    case "min":
-      return nums.length === 0 ? { status: "ok", value: null } : { status: "ok", value: nums[0] };
-    case "max":
-      return nums.length === 0
-        ? { status: "ok", value: null }
-        : { status: "ok", value: nums[nums.length - 1] };
-    case "show_original":
-      return { status: "ok", value: values };
-    default:
-      return {
-        status: "error",
-        error: { code: "type", message: `Unknown rollup aggregation: ${aggregation}` },
-      };
-  }
 }

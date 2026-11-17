@@ -32,14 +32,6 @@ export function getPrisma(): PrismaClient {
   return prisma;
 }
 
-/**
- * Let the Workers entrypoint inject a Neon-adapter-backed client at startup.
- * All services keep calling `getPrisma()` unchanged.
- */
-export function setPrisma(client: PrismaClient): void {
-  prisma = client;
-}
-
 export async function disconnectPrisma(): Promise<void> {
   if (prisma) {
     await prisma.$disconnect();

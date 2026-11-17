@@ -1,13 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
-import type { Request, Response, NextFunction } from "express";
 import { logger } from "../config/logger.js";
 
-/**
- * Domain error type. Services throw these; the error middleware maps them to
- * the right HTTP status + envelope. Keeps controllers thin and status codes
- * centralized.
- */
+/** Domain error type. Services throw these; `toErrorResponse` maps them to an HTTP status + envelope. */
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
@@ -41,7 +36,7 @@ export const unprocessableEntity = (
   details?: Record<string, unknown>,
 ) => new ApiError(422, "UNPROCESSABLE_ENTITY", message, details);
 
-interface ErrorEnvelope {
+export interface ErrorEnvelope {
   error: {
     code: string;
     message: string;
@@ -50,49 +45,39 @@ interface ErrorEnvelope {
   };
 }
 
-/**
- * Centralized error handler — the last middleware in the stack. Converts any
- * thrown error (ApiError, ZodError, or unknown) into the standard envelope.
- */
-export function errorHandler(
-  err: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
+export const tooLarge = () => new ApiError(413, "TOO_LARGE", "File is too large.");
+
+/** Map any thrown error (ApiError, ZodError, or unknown) to an HTTP status and the standard envelope. */
+export function toErrorResponse(err: unknown): { status: number; body: ErrorEnvelope } {
   if (err instanceof ZodError) {
-    const body: ErrorEnvelope = {
-      error: {
-        code: "VALIDATION_ERROR",
-        message: "Request validation failed",
-        details: err.flatten(),
+    return {
+      status: 400,
+      body: {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Request validation failed",
+          details: err.flatten(),
+        },
       },
     };
-    res.status(400).json(body);
-    return;
   }
-
   if (err instanceof ApiError) {
-    const body: ErrorEnvelope = {
-      error: {
-        code: err.code,
-        message: err.message,
-        ...(err.details ? { details: err.details } : {}),
+    return {
+      status: err.status,
+      body: {
+        error: {
+          code: err.code,
+          message: err.message,
+          ...(err.details ? { details: err.details } : {}),
+        },
       },
     };
-    res.status(err.status).json(body);
-    return;
   }
-
   // Unknown error — never leak internals, attach a reference id.
   const errorId = randomUUID();
   logger.error({ err, errorId }, "Unhandled error");
-  const body: ErrorEnvelope = {
-    error: {
-      code: "INTERNAL_ERROR",
-      message: "Something went wrong",
-      errorId,
-    },
+  return {
+    status: 500,
+    body: { error: { code: "INTERNAL_ERROR", message: "Something went wrong", errorId } },
   };
-  res.status(500).json(body);
 }

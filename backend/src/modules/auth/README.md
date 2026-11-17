@@ -1,7 +1,7 @@
 # Auth module (`/api/v1/auth`, `/api/v1/me`)
 
 JWT access tokens (15m, stateless) + opaque refresh tokens (30d, server-tracked
-in `sessions`, argon2-hashed). Both delivered in httpOnly cookies — no token
+in `sessions`, SHA-256-hashed). Both delivered in httpOnly cookies — no token
 touches JavaScript.
 
 ## Endpoints
@@ -14,7 +14,7 @@ touches JavaScript.
 | GET | `/me` | required | Returns current user. |
 
 ## Security notes
-- Passwords hashed with **argon2id** (OWASP baseline params).
+- Passwords hashed with **PBKDF2-SHA256** via WebCrypto (works on Node and Workers).
 - Refresh token **rotated on every refresh**; the old session row is revoked.
 - Mutating routes require `X-Requested-With: XMLHttpRequest` (CSRF guard, on top
   of `SameSite=Lax` cookies).

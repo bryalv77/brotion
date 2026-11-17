@@ -12,6 +12,7 @@ import { parsePdf } from "./parsers/pdf.js";
 import { parseSpreadsheet } from "./parsers/spreadsheet.js";
 import type { ParsedDocument } from "./parsers/types.js";
 import { badRequest } from "../../utils/errors.js";
+import type { FileBucket } from "../files/files.service.js";
 
 /**
  * Import orchestrator: detect file format → parse → create page + blocks
@@ -21,14 +22,15 @@ import { badRequest } from "../../utils/errors.js";
 const SUPPORTED_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".docx", ".pdf", ".xlsx", ".xls"]);
 
 export async function importFile(
+  storage: { bucket: FileBucket; origin: string },
   workspaceId: string,
   userId: string,
-  file: { originalname: string; buffer: Buffer },
+  file: File,
   parentId?: string,
 ) {
   await assertWorkspaceMember(workspaceId, userId);
 
-  const ext = extname(file.originalname).toLowerCase();
+  const ext = extname(file.name).toLowerCase();
   if (!SUPPORTED_EXTENSIONS.has(ext)) {
     throw badRequest(
       `Unsupported file type "${ext}". Supported: .md, .txt, .docx, .pdf, .xlsx`,
@@ -36,21 +38,19 @@ export async function importFile(
   }
 
   // Parse the file into a ParsedDocument.
-  const doc = await parseByFormat(ext, file.buffer);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const doc = await parseByFormat(ext, buffer);
 
   // Pre-allocate attachment URLs for any extracted images so we can write
   // them into the image blocks during the initial insert (avoids a 2nd pass).
   const imageUrls = new Map<number, string>();
   for (let i = 0; i < doc.images.length; i++) {
     try {
-      const att = await storeUpload({
-        fileName: doc.images[i].fileName,
-        mimeType: doc.images[i].mimeType,
-        sizeBytes: doc.images[i].buffer.length,
-        data: doc.images[i].buffer,
+      const image = doc.images[i];
+      const att = await storeUpload(storage.bucket, {
+        file: new File([new Uint8Array(image.buffer)], image.fileName, { type: image.mimeType }),
         userId,
-        pageId: undefined, // patched after the page exists
-        blockId: undefined,
+        origin: storage.origin,
       });
       imageUrls.set(i, att.url);
     } catch {
@@ -119,14 +119,7 @@ export async function importFile(
   // Also store the original file as an attachment on the page so the user
   // can download the source alongside the converted blocks.
   try {
-    await storeUpload({
-      fileName: file.originalname,
-      mimeType: "",
-      sizeBytes: file.buffer.length,
-      data: file.buffer,
-      userId,
-      pageId: page.id,
-    });
+    await storeUpload(storage.bucket, { file, userId, origin: storage.origin, pageId: page.id });
   } catch {
     // Non-fatal: the import succeeded, the attachment is a bonus.
   }

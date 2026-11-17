@@ -16,7 +16,7 @@ non-negotiable rules.
 
 - **App (web + iOS + Android):** one Expo project in `frontend/` — Expo Router,
   React Native, react-native-web, NativeWind (Tailwind for RN), TypeScript
-- **Backend:** Node.js + Express, TypeScript
+- **Backend:** Hono (Node + Cloudflare Workers), TypeScript
 - **Database:** PostgreSQL via Prisma
 - **Auth:** JWT in httpOnly cookies on web; on native, tokens are stored in the
   OS Keychain/Keystore (Expo SecureStore) and sent as bearer/refresh headers.
@@ -96,7 +96,7 @@ notion-clone/
 │   ├── lib/       API client, secure token storage, session store, query keys
 │   ├── stores/    zustand UI/theme/toast stores
 │   └── legacy-web/ archived Vite app + Playwright suite (reference only)
-├── backend/       Express + TS + Prisma (modules per domain)
+├── backend/       Hono + TS + Prisma (modules per domain)
 ├── shared/        API + block contracts (single source of truth for both apps)
 ├── docs/          architecture + ADRs
 ├── specs/         SDD specs (constitution, README, per-feature folders)
