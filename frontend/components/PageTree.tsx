@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react-native";
 import type { PageSummaryDTO } from "@notion-clone/shared";
@@ -8,6 +8,7 @@ import { useCreatePage } from "@/hooks/useCreatePage";
 import { useToast } from "@/stores/toast";
 import { PageGlyph } from "@/components/ui";
 import { colors } from "@/lib/theme";
+import { friendlyError } from "@/lib/friendlyError";
 
 interface PageTreeProps {
   workspaceId: string;
@@ -34,7 +35,7 @@ export function PageTree({ workspaceId, parentId = null, depth = 0 }: PageTreePr
       });
       router.push(`/(app)/page/${page.id}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not create page");
+      showToast(friendlyError(err, "Could not create page"));
     } finally {
       setCreating(false);
     }
@@ -56,7 +57,7 @@ export function PageTree({ workspaceId, parentId = null, depth = 0 }: PageTreePr
           accessibilityRole="button"
           accessibilityLabel="New page"
           hitSlop={8}
-          className="h-6 w-6 items-center justify-center rounded active:bg-surface-hover"
+          className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
         >
           <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
         </Pressable>
@@ -98,6 +99,10 @@ function PageTreeNode({
   const createPage = useCreatePage(workspaceId);
   const { showToast } = useToast();
   const [creatingSub, setCreatingSub] = useState(false);
+  // On web the add-subpage button reveals on hover or focus; native keeps it visible.
+  const [hover, setHover] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const showAdd = Platform.OS !== "web" || hover || focused;
   const active = page.id === activePageId;
   const indent = depth * 14;
 
@@ -111,7 +116,7 @@ function PageTreeNode({
       setExpanded(true);
       router.push(`/(app)/page/${child.id}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not create page");
+      showToast(friendlyError(err, "Could not create page"));
     } finally {
       setCreatingSub(false);
     }
@@ -119,9 +124,16 @@ function PageTreeNode({
 
   return (
     <View>
-      <View
+      <Pressable
+        accessible={false}
+        focusable={false}
+        onHoverIn={() => setHover(true)}
+        onHoverOut={() => setHover(false)}
         className="flex-row items-center rounded-md py-1 pr-1"
-        style={{ paddingLeft: 6 + indent, backgroundColor: active ? colors.active : "transparent" }}
+        style={{
+          paddingLeft: 6 + indent,
+          backgroundColor: active ? colors.active : hover ? colors.hover : "transparent",
+        }}
       >
         {page.has_children ? (
           <Pressable
@@ -129,12 +141,12 @@ function PageTreeNode({
             accessibilityRole="button"
             accessibilityLabel={expanded ? "Collapse page" : "Expand page"}
             hitSlop={8}
-            className="h-5 w-4 items-center justify-center"
+            className="h-8 w-6 items-center justify-center"
           >
             {expanded ? <ChevronDown size={14} strokeWidth={1.5} color={colors.inkFaint} /> : <ChevronRight size={14} strokeWidth={1.5} color={colors.inkFaint} />}
           </Pressable>
         ) : (
-          <View className="h-5 w-4" />
+          <View className="h-8 w-6" />
         )}
 
         <Pressable
@@ -157,11 +169,14 @@ function PageTreeNode({
           accessibilityRole="button"
           accessibilityLabel="Add subpage"
           hitSlop={8}
-          className="h-6 w-6 items-center justify-center rounded active:bg-surface-hover"
+          style={{ opacity: showAdd ? 1 : 0 }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
         >
           <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
         </Pressable>
-      </View>
+      </Pressable>
 
       {expanded && page.has_children ? (
         <View>

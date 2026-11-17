@@ -5,6 +5,7 @@ import { listTrashedPages, permanentDeletePage, restorePage } from "@/lib/data/p
 import { qk } from "@/lib/queryClient";
 import { useToast } from "@/stores/toast";
 import { EmptyState, H2, Loading, Muted, ScrollScreen, Button } from "@/components/ui";
+import { friendlyError } from "@/lib/friendlyError";
 
 export default function TrashScreen() {
   const { wsId } = useLocalSearchParams<{ wsId: string }>();
@@ -27,7 +28,7 @@ export default function TrashScreen() {
       refresh();
       showToast("Page restored", "info");
     } catch (e) {
-      showToast(e instanceof Error ? e.message : "Restore failed");
+      showToast(friendlyError(e, "Restore failed"));
     }
   };
 
@@ -37,7 +38,7 @@ export default function TrashScreen() {
       refresh();
       showToast("Deleted permanently", "info");
     } catch (e) {
-      showToast(e instanceof Error ? e.message : "Delete failed");
+      showToast(friendlyError(e, "Delete failed"));
     }
   };
 

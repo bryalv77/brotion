@@ -2,6 +2,8 @@ import type React from "react";
 import { useState } from "react";
 import { Modal, Platform, Pressable, Text, View } from "react-native";
 import { usePathname } from "expo-router";
+import { Menu } from "lucide-react-native";
+import { colors } from "@/lib/theme";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import { Sidebar } from "./Sidebar";
 import { QuickSearch } from "./QuickSearch";
@@ -42,9 +44,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           accessibilityRole="button"
           accessibilityLabel="Open sidebar"
           hitSlop={10}
-          className="p-1"
+          className="p-2"
         >
-          <Text className="text-xl text-ink">☰</Text>
+          <Menu size={20} strokeWidth={1.5} color={colors.ink} />
         </Pressable>
         <Text className="ml-3 text-base font-medium text-ink">Notion</Text>
       </View>

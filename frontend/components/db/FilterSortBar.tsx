@@ -15,6 +15,7 @@ import { isGroupable } from "./helpers";
 import { Button, Chip, Divider, ErrorBanner, H2, Input, Muted } from "@/components/ui";
 import { ArrowDown, ArrowUp, X } from "lucide-react-native";
 import { colors } from "@/lib/theme";
+import { friendlyError } from "@/lib/friendlyError";
 
 const FILTER_OPS: FilterOp[] = [
   "eq",
@@ -73,7 +74,7 @@ export function FilterSortBar({
       setError(null);
     },
     onError: (err) =>
-      setError(err instanceof Error ? err.message : "Could not update this view"),
+      setError(friendlyError(err, "Could not update this view")),
   });
 
   const persist = (next: ViewConfig) => {

@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { router, usePathname } from "expo-router";
+import { colors } from "@/lib/theme";
 import type { SearchResultDTO } from "@notion-clone/shared";
 import { useUI } from "@/stores/ui";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
@@ -23,9 +24,8 @@ function plainSnippet(snippet: string): string {
   return snippet.replace(/<[^>]*>/g, "").trim();
 }
 
-export function QuickSearch() {
-  const quickSearchOpen = useUI((s) => s.quickSearchOpen);
-  const setQuickSearchOpen = useUI((s) => s.setQuickSearchOpen);
+/** Debounced workspace search shared by QuickSearch and the page-reference picker. */
+export function useSearchResults(query: string) {
   const pathname = usePathname();
   const { data: workspaces } = useWorkspaces();
 
@@ -33,7 +33,6 @@ export function QuickSearch() {
   // user's first workspace (the same one the index route redirects to).
   const wsId = workspaceIdFromPath(pathname) ?? workspaces?.[0]?.id;
 
-  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -52,8 +51,8 @@ export function QuickSearch() {
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const results = await search(wsId, q);
-          if (!cancelled) setResults(results);
+          const found = await search(wsId, q);
+          if (!cancelled) setResults(found);
         } catch {
           if (!cancelled) setResults([]);
         } finally {
@@ -71,11 +70,19 @@ export function QuickSearch() {
     };
   }, [query, wsId]);
 
+  return { results, loading, searched, reset: () => { setResults([]); setSearched(false); } };
+}
+
+export function QuickSearch() {
+  const quickSearchOpen = useUI((s) => s.quickSearchOpen);
+  const setQuickSearchOpen = useUI((s) => s.setQuickSearchOpen);
+  const [query, setQuery] = useState("");
+  const { results, loading, searched, reset } = useSearchResults(query);
+
   function close() {
     setQuickSearchOpen(false);
     setQuery("");
-    setResults([]);
-    setSearched(false);
+    reset();
   }
 
   function select(result: SearchResultDTO) {
@@ -128,7 +135,7 @@ export function QuickSearch() {
               </View>
             ) : loading ? (
               <View className="flex-row items-center justify-center gap-2 py-8">
-                <ActivityIndicator color="#2383e2" />
+                <ActivityIndicator color={colors.accent} />
                 <Text className="text-sm text-inkFaint">Searching…</Text>
               </View>
             ) : results.length === 0 ? (

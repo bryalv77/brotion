@@ -9,11 +9,15 @@ import {
 import type { BlockDTO, BlockType } from "@notion-clone/shared";
 import { createBlock, deleteBlock, updateBlock } from "@/lib/data/blocks";
 import { qk, queryClient } from "@/lib/queryClient";
+import { Plus } from "lucide-react-native";
 import { ErrorBanner } from "@/components/ui";
+import { colors } from "@/lib/theme";
+import { useToast } from "@/stores/toast";
 import { BlockRow } from "./BlockRow";
 import type { BlockConversion } from "./SlashMenu";
 import { blockToText, makeBlock, textToContent } from "./blocks";
 import { useDebouncedCallback } from "./useBlockSync";
+import { friendlyError } from "@/lib/friendlyError";
 
 interface PendingUpdate {
   content: Record<string, unknown>;
@@ -56,6 +60,9 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
   const blocksRef = useRef<BlockDTO[]>(initialBlocks);
   const dirtyRef = useRef<Map<string, PendingUpdate>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const showToast = useToast((s) => s.showToast);
+  const [failedSave, setFailedSave] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   // A ref mirror lets every handler read the latest blocks without stale
   // closures or side effects inside a state updater.
@@ -70,7 +77,7 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
 
   const fail = useCallback(
     (err: unknown, fallback: string) => {
-      setError(err instanceof Error ? err.message : fallback);
+      setError(friendlyError(err, fallback));
       invalidate();
     },
     [invalidate],
@@ -81,11 +88,24 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
     const dirty = dirtyRef.current;
     if (dirty.size === 0) return;
     dirtyRef.current = new Map();
-    dirty.forEach((update, id) => {
-      void updateBlock(id, update)
+    const saves = [...dirty].map(([id, update]) =>
+      updateBlock(id, update)
         .then(() => invalidate())
-        .catch((err: unknown) => fail(err, "Could not save block"));
-    });
+        .catch((err: unknown) => {
+          // Keep the unsaved edit so Retry can resend it (newer edits win).
+          dirtyRef.current.set(id, { ...update, ...dirtyRef.current.get(id) });
+          setFailedSave(true);
+          fail(err, "Could not save block");
+          throw err;
+        }),
+    );
+    Promise.all(saves).then(
+      () => {
+        setFailedSave(false);
+        setSaveState("saved");
+      },
+      () => setSaveState("idle"),
+    );
   }, [invalidate, fail]);
 
   const debouncedSave = useDebouncedCallback(saveDirty, 600);
@@ -94,6 +114,7 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
     (id: string, content: Record<string, unknown>, type?: BlockType) => {
       const current = blocksRef.current;
       if (!current.some((b) => b.id === id)) return;
+      setSaveState("saving");
       dirtyRef.current.set(id, {
         ...dirtyRef.current.get(id),
         content,
@@ -195,12 +216,31 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
     (id: string) => {
       debouncedSave.flush();
       dirtyRef.current.delete(id);
-      setBlocksSafe(blocksRef.current.filter((b) => b.id !== id));
+      const current = blocksRef.current;
+      const removed = current.find((b) => b.id === id);
+      const previous = removed ? current[current.indexOf(removed) - 1] : undefined;
+      setBlocksSafe(current.filter((b) => b.id !== id));
       void deleteBlock(id)
-        .then(() => invalidate())
+        .then(() => {
+          invalidate();
+          if (!removed) return;
+          showToast("Block deleted", "info", {
+            label: "Undo",
+            onPress: () => {
+              // Restore as a new block at the same position; the old id is gone.
+              void createBlock(pageId, {
+                type: removed.type,
+                content: removed.content as unknown as Record<string, unknown>,
+                ...(previous && previous.parent_block_id === null ? { after_id: previous.id } : {}),
+              })
+                .then(() => invalidate())
+                .catch((err: unknown) => fail(err, "Could not restore block"));
+            },
+          });
+        })
         .catch((err: unknown) => fail(err, "Could not delete block"));
     },
-    [debouncedSave, setBlocksSafe, invalidate, fail],
+    [pageId, debouncedSave, setBlocksSafe, invalidate, fail, showToast],
   );
 
   const handleConvert = useCallback(
@@ -288,16 +328,42 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-white"
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 96 }}
         keyboardShouldPersistTaps="handled"
       >
+        {saveState !== "idle" ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            className="px-4 pb-2 text-right text-xs text-inkLight"
+          >
+            {saveState === "saving" ? "Saving…" : "Saved"}
+          </Text>
+        ) : null}
+
         {error ? (
-          <Pressable onPress={() => setError(null)}>
+          <Pressable
+            onPress={() => setError(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss error"
+          >
             <ErrorBanner message={error} />
+          </Pressable>
+        ) : null}
+        {error && failedSave ? (
+          <Pressable
+            onPress={() => {
+              setError(null);
+              saveDirty();
+            }}
+            accessibilityRole="button"
+            hitSlop={12}
+            className="mx-4 mb-2 min-h-11 justify-center self-start"
+          >
+            <Text className="text-sm font-medium text-accent">Retry saving</Text>
           </Pressable>
         ) : null}
 
@@ -325,9 +391,9 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
         <Pressable
           onPress={() => insertParagraph()}
           accessibilityRole="button"
-          className="mx-4 mt-2 flex-row items-center gap-2 py-2"
+          className="mx-4 mt-2 min-h-11 flex-row items-center gap-2 py-2"
         >
-          <Text className="text-lg text-inkFaint">+</Text>
+          <Plus size={16} strokeWidth={1.5} color={colors.inkFaint} />
           <Text className="text-sm text-inkLight">Add a block</Text>
         </Pressable>
       </ScrollView>

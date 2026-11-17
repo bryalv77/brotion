@@ -32,6 +32,8 @@ export default function LoginScreen() {
           value={email}
           onChangeText={setEmail}
           placeholder="Email"
+          accessibilityLabel="Email"
+          textContentType="emailAddress"
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -40,6 +42,8 @@ export default function LoginScreen() {
           value={password}
           onChangeText={setPassword}
           placeholder="Password"
+          accessibilityLabel="Password"
+          textContentType="password"
           secureTextEntry
           autoComplete="current-password"
           onSubmitEditing={submit}
@@ -51,7 +55,7 @@ export default function LoginScreen() {
             Sign up
           </Link>
         </View>
-        <Link href="/(app)/" className="mt-2 self-center text-sm text-inkFaint">
+        <Link href="/(app)/" className="mt-2 self-center py-2 text-sm text-inkLight">
           Continue without an account
         </Link>
       </View>

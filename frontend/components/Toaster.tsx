@@ -27,6 +27,7 @@ export function Toaster() {
       {toasts.map((toast) => (
         <View
           key={toast.id}
+          accessibilityLiveRegion="polite"
           style={{
             flexDirection: "row",
             alignItems: "center",
@@ -41,11 +42,25 @@ export function Toaster() {
           <Text style={{ flexShrink: 1, color: "#ffffff", fontSize: 14 }}>
             {toast.message}
           </Text>
+          {toast.action ? (
+            <Pressable
+              onPress={() => {
+                toast.action?.onPress();
+                dismiss(toast.id);
+              }}
+              accessibilityRole="button"
+              hitSlop={12}
+            >
+              <Text style={{ color: "#ffffff", fontSize: 14, fontWeight: "500", textDecorationLine: "underline" }}>
+                {toast.action.label}
+              </Text>
+            </Pressable>
+          ) : null}
           <Pressable
             onPress={() => dismiss(toast.id)}
             accessibilityRole="button"
             accessibilityLabel="Dismiss notification"
-            hitSlop={8}
+            hitSlop={12}
           >
             <X size={16} strokeWidth={1.5} color="rgba(255,255,255,0.8)" />
           </Pressable>

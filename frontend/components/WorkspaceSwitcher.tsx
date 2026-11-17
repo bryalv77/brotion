@@ -11,6 +11,7 @@ import { useToast } from "@/stores/toast";
 import { Check, ChevronDown } from "lucide-react-native";
 import { colors } from "@/lib/theme";
 import { Button, Input } from "@/components/ui";
+import { friendlyError } from "@/lib/friendlyError";
 
 /** Pull the workspace id out of a route like /(app)/workspace/abc or /workspace/abc. */
 function workspaceIdFromPath(path: string): string | undefined {
@@ -49,7 +50,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
       setOpen(false);
       router.push(`/(app)/workspace/${ws.id}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Could not create workspace");
+      showToast(friendlyError(err, "Could not create workspace"));
     } finally {
       setCreating(false);
     }

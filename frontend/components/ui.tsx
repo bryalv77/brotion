@@ -83,6 +83,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       accessibilityRole="button"
+      accessibilityState={{ disabled: Boolean(disabled || loading) }}
       className={`h-11 items-center justify-center rounded-lg px-5 ${variantClass} ${disabled ? "opacity-50" : ""} ${className}`}
     >
       {loading ? (
@@ -174,7 +175,9 @@ export function Chip({
   return (
     <Pressable
       onPress={onPress}
-      className={`mr-2 rounded-lg px-3 py-2 ${active ? "bg-accent" : "bg-surface-hover"}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected: Boolean(active) }}
+      className={`mr-2 min-h-8 justify-center rounded-lg px-3 py-2 ${active ? "bg-accent" : "bg-surface-hover"}`}
     >
       <Text className={`text-xs font-medium ${active ? "text-white" : "text-ink"}`}>{label}</Text>
     </Pressable>

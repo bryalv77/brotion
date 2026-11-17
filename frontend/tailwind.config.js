@@ -13,8 +13,8 @@ module.exports = {
       colors: {
         ink: {
           DEFAULT: "#37352f",
-          light: "#787774",
-          faint: "#9b9a97",
+          light: "#5f5e5b",
+          faint: "#75736f",
         },
         surface: {
           DEFAULT: "#ffffff",

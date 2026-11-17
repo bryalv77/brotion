@@ -16,6 +16,7 @@ import {
 } from "./helpers";
 import { Check } from "lucide-react-native";
 import { colors } from "@/lib/theme";
+import { friendlyError } from "@/lib/friendlyError";
 
 interface CellEditorProps {
   databaseId: string;
@@ -69,7 +70,7 @@ export function CellEditor({
       setOpen(false);
     },
     onError: (err) =>
-      setError(err instanceof Error ? err.message : "Could not save this cell"),
+      setError(friendlyError(err, "Could not save this cell")),
   });
 
   const nextValue = (): unknown => {

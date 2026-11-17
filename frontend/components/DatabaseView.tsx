@@ -19,6 +19,7 @@ import { GalleryView } from "./db/GalleryView";
 import { ListView } from "./db/ListView";
 import { TableView } from "./db/TableView";
 import { TemplatesModal } from "./db/TemplatesModal";
+import { friendlyError } from "@/lib/friendlyError";
 
 interface ViewProps {
   db: DatabaseDTO;
@@ -132,7 +133,7 @@ export function DatabaseView({
       <View className="gap-3 p-4">
         <ErrorBanner
           message={
-            error instanceof Error ? error.message : "Could not load this database"
+            friendlyError(error, "Could not load this database")
           }
         />
         <EmptyState

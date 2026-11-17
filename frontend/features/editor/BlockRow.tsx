@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Image,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -12,7 +13,7 @@ import { colors } from "@/lib/theme";
 import { PageGlyph } from "@/components/ui";
 import { blockToText, richTextToPlainText, textRun } from "./blocks";
 import { SlashMenu, type BlockConversion } from "./SlashMenu";
-import { X } from "lucide-react-native";
+import { Lightbulb, Plus, Square, SquareCheck, X } from "lucide-react-native";
 
 export interface BlockRowProps {
   block: BlockDTO;
@@ -61,6 +62,15 @@ export function BlockRow({
     c.type === "image" ? richTextToPlainText(c.caption) : "",
   );
   const [menuVisible, setMenuVisible] = useState(false);
+  // On web the row controls reveal on hover or focus; native keeps them visible.
+  const [hover, setHover] = useState(false);
+  const [focus, setFocus] = useState(0);
+  const showChrome = Platform.OS !== "web" || hover || focus > 0 || menuVisible;
+  const chromeStyle = { opacity: showChrome ? 1 : 0 } as const;
+  const chromeFocus = {
+    onFocus: () => setFocus((n) => n + 1),
+    onBlur: () => setFocus((n) => Math.max(0, n - 1)),
+  };
 
   // A slash-menu conversion keeps the same row (keyed by block.id) but swaps
   // its content shape — reflect externally supplied image/code fields then.
@@ -75,6 +85,11 @@ export function BlockRow({
   }, [block.type, c]);
 
   function handleTextChange(value: string) {
+    // A lone "/" opens the block menu and is not kept as text.
+    if (value === "/" && !isCode && text === "") {
+      setMenuVisible(true);
+      return;
+    }
     setText(value);
     onChangeText(block.id, value);
   }
@@ -143,7 +158,11 @@ export function BlockRow({
   } else if (block.type === "callout") {
     body = (
       <View className="flex-row items-start gap-2 rounded-lg bg-surface-hover px-3 py-2">
-        <Text className="text-base">{c.type === "callout" ? (c.icon ?? "💡") : "💡"}</Text>
+        {c.type === "callout" && c.icon ? (
+          <Text className="text-base">{c.icon}</Text>
+        ) : (
+          <Lightbulb size={18} strokeWidth={1.5} color={colors.inkLight} />
+        )}
         <View className="flex-1">{textInput}</View>
       </View>
     );
@@ -262,38 +281,56 @@ export function BlockRow({
         onPress={() => onToggleChecked(block.id, !checked)}
         accessibilityRole="checkbox"
         accessibilityState={{ checked }}
+        accessibilityLabel={text || "To-do"}
+        hitSlop={12}
         className="pt-1"
       >
-        <Text className="text-lg text-ink">{checked ? "☑" : "☐"}</Text>
+        {checked ? (
+          <SquareCheck size={18} strokeWidth={1.5} color={colors.accent} />
+        ) : (
+          <Square size={18} strokeWidth={1.5} color={colors.inkLight} />
+        )}
       </Pressable>
     );
   }
 
   return (
-    <View className="px-4 py-1">
+    <Pressable
+      accessible={false}
+      focusable={false}
+      onHoverIn={() => setHover(true)}
+      onHoverOut={() => setHover(false)}
+      className="px-4 py-1"
+    >
       <View className="flex-row items-start gap-2">
         <Pressable
           onPress={() => setMenuVisible(true)}
           accessibilityRole="button"
-          hitSlop={8}
+          accessibilityLabel="Change block type"
+          hitSlop={12}
           className="pt-1"
+          style={chromeStyle}
+          {...chromeFocus}
         >
-          <Text className="text-lg text-inkFaint">+</Text>
+          <Plus size={18} strokeWidth={1.5} color={colors.inkFaint} />
         </Pressable>
         {prefix}
         <View className="flex-1">{body}</View>
         <Pressable
           onPress={() => onDelete(block.id)}
           accessibilityRole="button"
-          hitSlop={8}
+          accessibilityLabel="Delete block"
+          hitSlop={12}
           className="px-1 pt-1"
+          style={chromeStyle}
+          {...chromeFocus}
         >
           <X size={16} strokeWidth={1.5} color={colors.inkFaint} />
         </Pressable>
       </View>
 
       {isCode ? (
-        <Pressable onPress={() => onAddBelow(block.id)} className="ml-8 mt-1 self-start">
+        <Pressable onPress={() => onAddBelow(block.id)} accessibilityRole="button" hitSlop={12} className="ml-8 mt-1 self-start">
           <Text className="text-xs text-accent">Add block below</Text>
         </Pressable>
       ) : null}
@@ -303,7 +340,7 @@ export function BlockRow({
         onClose={() => setMenuVisible(false)}
         onSelect={(conversion) => onConvert(block.id, conversion)}
       />
-    </View>
+    </Pressable>
   );
 }
 

@@ -34,6 +34,7 @@ export default function RegisterScreen() {
           value={email}
           onChangeText={setEmail}
           placeholder="Email"
+          accessibilityLabel="Email"
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
@@ -42,6 +43,7 @@ export default function RegisterScreen() {
           value={password}
           onChangeText={setPassword}
           placeholder="Password (8+ characters)"
+          accessibilityLabel="Password"
           secureTextEntry
           autoComplete="new-password"
           onSubmitEditing={submit}
