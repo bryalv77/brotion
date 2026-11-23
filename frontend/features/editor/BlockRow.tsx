@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Image,
   Platform,
@@ -10,10 +10,11 @@ import {
 } from "react-native";
 import type { BlockDTO } from "@notion-clone/shared";
 import { colors } from "@/lib/theme";
+import { DatabaseView } from "@/components/DatabaseView";
 import { PageGlyph } from "@/components/ui";
 import { blockToText, richTextToPlainText, textRun } from "./blocks";
 import { SlashMenu, type BlockConversion } from "./SlashMenu";
-import { Lightbulb, Plus, Square, SquareCheck, X } from "lucide-react-native";
+import { GripVertical, Lightbulb, Plus, Square, SquareCheck, X } from "lucide-react-native";
 
 export interface BlockRowProps {
   block: BlockDTO;
@@ -27,6 +28,10 @@ export interface BlockRowProps {
   onAddBelow: (id: string) => void;
   onDelete: (id: string) => void;
   onConvert: (id: string, conversion: BlockConversion) => void;
+  onMove: (id: string, targetId: string, pos: "before" | "after") => void;
+  autoFocus?: boolean;
+  /** Bump to re-focus an already-mounted block. */
+  focusNonce?: number;
 }
 
 const TEXT_STYLES: Record<string, string> = {
@@ -42,6 +47,9 @@ const TEXT_STYLES: Record<string, string> = {
   code: "text-sm font-mono text-ink",
 };
 
+/** Id of the block currently being dragged (one drag at a time, shared across rows). */
+let draggingId: string | null = null;
+
 export function BlockRow({
   block,
   listIndex,
@@ -52,6 +60,9 @@ export function BlockRow({
   onAddBelow,
   onDelete,
   onConvert,
+  onMove,
+  autoFocus,
+  focusNonce,
 }: BlockRowProps) {
   const c = block.content;
   const isCode = block.type === "code";
@@ -71,6 +82,65 @@ export function BlockRow({
     onFocus: () => setFocus((n) => n + 1),
     onBlur: () => setFocus((n) => Math.max(0, n - 1)),
   };
+
+  // ── drag & drop reorder (web only; uses native HTML5 drag events) ───────────
+  const rowRef = useRef<any>(null);
+  const inputRef = useRef<any>(null);
+  // Re-focus on demand (autoFocus alone only applies on mount).
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus, focusNonce]);
+  const handleRef = useRef<any>(null);
+  const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
+  const moveRef = useRef(onMove);
+  moveRef.current = onMove;
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const row = rowRef.current as HTMLElement | null;
+    const handle = handleRef.current as HTMLElement | null;
+    if (!row || !handle) return;
+    const posFor = (e: DragEvent) => {
+      const r = row.getBoundingClientRect();
+      return e.clientY < r.top + r.height / 2 ? "before" : "after";
+    };
+    const onStart = (e: DragEvent) => {
+      draggingId = block.id;
+      e.dataTransfer?.setData("text/plain", block.id); // Firefox needs data to start a drag
+      if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer?.setDragImage(row, 0, 0);
+    };
+    const onEnd = () => {
+      draggingId = null;
+      setDropPos(null);
+    };
+    const onOver = (e: DragEvent) => {
+      if (!draggingId || draggingId === block.id) return;
+      e.preventDefault();
+      setDropPos(posFor(e));
+    };
+    const onLeave = (e: DragEvent) => {
+      if (!row.contains(e.relatedTarget as Node | null)) setDropPos(null);
+    };
+    const onDrop = (e: DragEvent) => {
+      if (!draggingId || draggingId === block.id) return;
+      e.preventDefault();
+      moveRef.current(draggingId, block.id, posFor(e));
+      onEnd();
+    };
+    handle.draggable = true;
+    handle.addEventListener("dragstart", onStart);
+    handle.addEventListener("dragend", onEnd);
+    row.addEventListener("dragover", onOver);
+    row.addEventListener("dragleave", onLeave);
+    row.addEventListener("drop", onDrop);
+    return () => {
+      handle.removeEventListener("dragstart", onStart);
+      handle.removeEventListener("dragend", onEnd);
+      row.removeEventListener("dragover", onOver);
+      row.removeEventListener("dragleave", onLeave);
+      row.removeEventListener("drop", onDrop);
+    };
+  }, [block.id]);
 
   // A slash-menu conversion keeps the same row (keyed by block.id) but swaps
   // its content shape — reflect externally supplied image/code fields then.
@@ -121,11 +191,13 @@ export function BlockRow({
   // ── text-bearing block input ────────────────────────────────────────────────
   const textInput: ReactNode = (
     <TextInput
+      ref={inputRef}
       value={text}
       onChangeText={handleTextChange}
       // Multiline RN inputs give no reliable Enter key event — use the explicit
       // "Add block below" button for code instead.
       onSubmitEditing={isCode ? undefined : () => onAddBelow(block.id)}
+      autoFocus={autoFocus}
       multiline={isCode}
       numberOfLines={isCode ? 8 : 1}
       placeholder={isCode ? "// code" : "Type / for blocks"}
@@ -214,6 +286,8 @@ export function BlockRow({
         />
       </View>
     );
+  } else if (block.type === "database") {
+    body = c.type === "database" ? <DatabaseView databaseId={c.database_id} /> : null;
   } else if (block.type === "page_ref") {
     const page = c.type === "page_ref" ? c : undefined;
     // Page navigation lives outside this editor feature; the card is kept
@@ -296,13 +370,26 @@ export function BlockRow({
 
   return (
     <Pressable
+      ref={rowRef}
       accessible={false}
       focusable={false}
       onHoverIn={() => setHover(true)}
       onHoverOut={() => setHover(false)}
       className="px-4 py-1"
     >
+      {dropPos ? (
+        <View
+          pointerEvents="none"
+          className="absolute left-4 right-4 h-0.5 bg-accent"
+          style={dropPos === "before" ? { top: 0 } : { bottom: 0 }}
+        />
+      ) : null}
       <View className="flex-row items-start gap-2">
+        {Platform.OS === "web" ? (
+          <View ref={handleRef} accessibilityLabel="Drag to reorder" className="pt-1" style={[chromeStyle, { cursor: "grab" } as object]}>
+            <GripVertical size={18} strokeWidth={1.5} color={colors.inkFaint} />
+          </View>
+        ) : null}
         <Pressable
           onPress={() => setMenuVisible(true)}
           accessibilityRole="button"
@@ -336,6 +423,7 @@ export function BlockRow({
       ) : null}
 
       <SlashMenu
+        pageId={block.page_id}
         visible={menuVisible}
         onClose={() => setMenuVisible(false)}
         onSelect={(conversion) => onConvert(block.id, conversion)}

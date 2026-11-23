@@ -105,7 +105,7 @@ test.describe("Expo web app", () => {
     await page.goto(`/page/${pageId}`);
 
     await expect(page.getByText("E2E editor page")).toBeVisible();
-    await page.getByRole("button", { name: "+ Add a block" }).click();
+    await page.getByRole("button", { name: "Click here to start writing" }).click();
     const input = page.getByPlaceholder("Type something…").first();
     await expect(input).toBeVisible();
 

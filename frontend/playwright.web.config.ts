@@ -24,13 +24,13 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "yarn e2e:server:backend",
+      command: "pnpm e2e:server:backend",
       url: `${BACKEND}/api/v1/health`,
       reuseExistingServer: true,
       timeout: 120_000,
     },
     {
-      command: "yarn e2e:server:frontend",
+      command: "pnpm e2e:server:frontend",
       url: WEB,
       reuseExistingServer: true,
       timeout: 180_000,

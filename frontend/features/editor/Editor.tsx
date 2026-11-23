@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,9 +7,8 @@ import {
   Text,
 } from "react-native";
 import type { BlockDTO, BlockType } from "@notion-clone/shared";
-import { createBlock, deleteBlock, updateBlock } from "@/lib/data/blocks";
+import { createBlock, deleteBlock, reorderBlock, updateBlock } from "@/lib/data/blocks";
 import { qk, queryClient } from "@/lib/queryClient";
-import { Plus } from "lucide-react-native";
 import { ErrorBanner } from "@/components/ui";
 import { colors } from "@/lib/theme";
 import { useToast } from "@/stores/toast";
@@ -55,12 +54,23 @@ function optimisticBlock(
   };
 }
 
-export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlocks: BlockDTO[] }) {
+export interface EditorHandle {
+  /** Add a paragraph at the end and focus it (no-op if one is already empty there). */
+  appendParagraph: () => void;
+}
+
+export const Editor = forwardRef<EditorHandle, { pageId: string; initialBlocks: BlockDTO[] }>(function Editor(
+  { pageId, initialBlocks },
+  ref,
+) {
   const [blocks, setBlocks] = useState<BlockDTO[]>(() => initialBlocks);
   const blocksRef = useRef<BlockDTO[]>(initialBlocks);
   const dirtyRef = useRef<Map<string, PendingUpdate>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const showToast = useToast((s) => s.showToast);
+  // Block that should grab keyboard focus when it mounts (the one just inserted).
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [focusNonce, setFocusNonce] = useState(0);
   const [failedSave, setFailedSave] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
@@ -174,6 +184,7 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
           : 1;
 
       const id = tempId();
+      setFocusId(id);
       setBlocksSafe([
         ...current.slice(0, index + 1),
         optimisticBlock(
@@ -200,6 +211,7 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
           const pending = dirtyRef.current.get(id);
           const finalBlock = pending && local ? { ...created, content: local.content } : created;
           setBlocksSafe(blocksRef.current.map((b) => (b.id === id ? finalBlock : b)));
+          setFocusId((f) => (f === id ? created.id : f));
           if (pending) {
             dirtyRef.current.delete(id);
             dirtyRef.current.set(created.id, pending);
@@ -265,11 +277,15 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
           if (conversion.extras?.title !== undefined) content.title = conversion.extras.title;
           break;
         }
+        case "database": {
+          content = { type: "database", database_id: conversion.extras?.databaseId ?? "" };
+          break;
+        }
         default:
           content = textToContent(conversion.type, text, block);
       }
 
-      if (conversion.type === "page_ref") {
+      if (conversion.type === "page_ref" || conversion.type === "database") {
         // Backend's PATCH type enum omits `page_ref`, so recreate the row in
         // place (create supports it) and then remove the original.
         const prev = index > 0 ? current[index - 1] : undefined;
@@ -283,10 +299,10 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
         const temp = tempId();
         setBlocksSafe([
           ...current.slice(0, index),
-          optimisticBlock(temp, pageId, "page_ref", content, block.order),
+          optimisticBlock(temp, pageId, conversion.type, content, block.order),
           ...current.slice(index + 1),
         ]);
-        void createBlock(pageId, { type: "page_ref", content, ...anchor })
+        void createBlock(pageId, { type: conversion.type, content, ...anchor })
           .then(async (created) => {
             setBlocksSafe(blocksRef.current.map((b) => (b.id === temp ? created : b)));
             await deleteBlock(id);
@@ -296,19 +312,66 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
         return;
       }
 
+      const newType = conversion.type;
       dirtyRef.current.delete(id);
       setBlocksSafe(
         current.map((b) =>
           b.id === id
-            ? { ...b, type: conversion.type, content: toDTOContent(content) }
+            ? { ...b, type: newType, content: toDTOContent(content) }
             : b,
         ),
       );
-      void updateBlock(id, { type: conversion.type, content })
+      void updateBlock(id, { type: newType, content })
         .then(() => invalidate())
         .catch((err: unknown) => fail(err, "Could not convert block"));
     },
     [pageId, debouncedSave, setBlocksSafe, invalidate, fail],
+  );
+
+  /** Drag-and-drop: move block `id` just before/after block `targetId`. */
+  const handleMove = useCallback(
+    (id: string, targetId: string, pos: "before" | "after") => {
+      if (id === targetId || id.startsWith("temp-") || targetId.startsWith("temp-")) return;
+      debouncedSave.flush();
+      const current = blocksRef.current;
+      const moving = current.find((b) => b.id === id);
+      if (!moving) return;
+      const rest = current.filter((b) => b.id !== id);
+      const top = rest.filter((b) => b.parent_block_id === null && b.type !== "table_row");
+      const ti = top.findIndex((b) => b.id === targetId);
+      if (ti < 0) return;
+      const prev = top[pos === "before" ? ti - 1 : ti];
+      const next = top[pos === "before" ? ti : ti + 1];
+      const order =
+        prev && next ? (prev.order + next.order) / 2 : next ? next.order - 0.5 : prev ? prev.order + 1 : moving.order;
+      const at = rest.findIndex((b) => b.id === targetId) + (pos === "before" ? 0 : 1);
+      setBlocksSafe([...rest.slice(0, at), { ...moving, order }, ...rest.slice(at)]);
+      void reorderBlock(pageId, {
+        block_id: id,
+        ...(prev ? { after_id: prev.id } : {}),
+        ...(next ? { before_id: next.id } : {}),
+      })
+        .then(() => invalidate())
+        .catch((err: unknown) => fail(err, "Could not move block"));
+    },
+    [pageId, debouncedSave, setBlocksSafe, invalidate, fail],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      appendParagraph: () => {
+        const last = blocksRef.current[blocksRef.current.length - 1];
+        // Don't pile up empty paragraphs; focus the existing one instead.
+        if (last?.type === "paragraph" && blockToText(last) === "") {
+          setFocusId(last.id);
+          setFocusNonce((n) => n + 1);
+          return;
+        }
+        insertParagraph();
+      },
+    }),
+    [insertParagraph],
   );
 
   // table_row blocks are rendered inside their parent table, never as rows.
@@ -332,7 +395,7 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
     >
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 96 }}
+        contentContainerStyle={{ paddingTop: 16 }}
         keyboardShouldPersistTaps="handled"
       >
         {saveState !== "idle" ? (
@@ -368,9 +431,9 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
         ) : null}
 
         {rows.length === 0 ? (
-          <Text className="px-4 py-6 text-base text-inkFaint">
-            This page is empty. Add a block below to start writing.
-          </Text>
+          <Pressable onPress={() => insertParagraph()} accessibilityRole="button" className="px-4 py-6">
+            <Text className="text-base text-inkFaint">Click here to start writing</Text>
+          </Pressable>
         ) : null}
 
         {rows.map(({ block, listIndex, tableRows }) => (
@@ -385,18 +448,13 @@ export function Editor({ pageId, initialBlocks }: { pageId: string; initialBlock
             onAddBelow={insertParagraph}
             onDelete={handleDelete}
             onConvert={handleConvert}
+            onMove={handleMove}
+            autoFocus={block.id === focusId}
+            focusNonce={focusNonce}
           />
         ))}
 
-        <Pressable
-          onPress={() => insertParagraph()}
-          accessibilityRole="button"
-          className="mx-4 mt-2 min-h-11 flex-row items-center gap-2 py-2"
-        >
-          <Plus size={16} strokeWidth={1.5} color={colors.inkFaint} />
-          <Text className="text-sm text-inkLight">Add a block</Text>
-        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
+});

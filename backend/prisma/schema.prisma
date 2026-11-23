@@ -64,6 +64,7 @@ enum BlockType {
   table
   table_row
   page_ref
+  database
 }
 
 enum ViewType {

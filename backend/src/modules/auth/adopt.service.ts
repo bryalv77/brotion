@@ -23,7 +23,7 @@ import type { AdoptLocalInput } from "./adopt.schema.js";
 const BLOCK_TYPES = new Set([
   "paragraph", "heading1", "heading2", "heading3",
   "bulleted_list_item", "numbered_list_item", "todo", "quote", "callout",
-  "divider", "code", "image", "table", "table_row", "page_ref",
+  "divider", "code", "image", "table", "table_row", "page_ref", "database",
 ]);
 const PROPERTY_TYPES = new Set([
   "text", "number", "select", "multi_select", "status", "date", "checkbox",

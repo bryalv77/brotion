@@ -1,20 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPage, updatePage } from "@/lib/data/pages";
 import { qk } from "@/lib/queryClient";
 import { usePageBreadcrumbs } from "@/hooks/usePageBreadcrumbs";
-import { Editor } from "@/features/editor/Editor";
+import { Editor, type EditorHandle } from "@/features/editor/Editor";
 import { PageDatabases } from "@/components/PageDatabases";
 import { PageAttachments } from "@/components/PageAttachments";
-import { H1, Input, Loading, Muted, ErrorBanner, Divider } from "@/components/ui";
+import { H1, Input, Loading, Muted, ErrorBanner } from "@/components/ui";
 
 export default function PageScreen() {
   const { pageId } = useLocalSearchParams<{ pageId: string }>();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
+  const editorRef = useRef<EditorHandle>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: qk.page(pageId),
@@ -50,7 +51,7 @@ export default function PageScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerClassName="mx-auto w-full max-w-3xl px-5 py-8">
+    <ScrollView className="flex-1 bg-white" contentContainerClassName="mx-auto w-full max-w-3xl flex-grow px-5 pt-8">
       {breadcrumbs && breadcrumbs.length > 0 ? (
         <View className="mb-4 flex-row flex-wrap items-center gap-1">
           {breadcrumbs.map((crumb, i) => (
@@ -88,14 +89,27 @@ export default function PageScreen() {
       <ErrorBanner message={rename.error?.message ?? null} />
 
       <View className="mt-6">
-        <Editor pageId={page.id} initialBlocks={blocks} />
+        <Editor ref={editorRef} pageId={page.id} initialBlocks={blocks} />
       </View>
 
-      <View className="mt-10 gap-8">
-        <Divider />
-        <PageDatabases pageId={page.id} />
+      <View className="mt-4">
+        <PageDatabases
+          pageId={page.id}
+          embeddedIds={blocks.flatMap((b) => (b.content.type === "database" ? [b.content.database_id] : []))}
+        />
+      </View>
+
+      <View className="mt-10">
         <PageAttachments pageId={page.id} />
       </View>
+
+      {/* Blank space below everything: tap to keep writing at the end. */}
+      <Pressable
+        onPress={() => editorRef.current?.appendParagraph()}
+        accessible={false}
+        focusable={false}
+        className="min-h-24 flex-1"
+      />
     </ScrollView>
   );
 }

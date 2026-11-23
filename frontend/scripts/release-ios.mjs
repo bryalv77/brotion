@@ -1,4 +1,4 @@
-// Local iOS build + TestFlight upload. No EAS. Usage: yarn release:ios [--no-upload]
+// Local iOS build + TestFlight upload. No EAS. Usage: pnpm release:ios [--no-upload]
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -51,7 +51,7 @@ writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2) + '\n');
 
 // 3. Generate native project (prebuild is clean by default), then pods
 try {
-  run('yarn', ['expo', 'prebuild', '--platform', 'ios', '--no-install']);
+  run('pnpm', ['exec', 'expo', 'prebuild', '--platform', 'ios', '--no-install']);
 } finally {
   // keep the version bump, drop the build number
   delete expo.ios.buildNumber;

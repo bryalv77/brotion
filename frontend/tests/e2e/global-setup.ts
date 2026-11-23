@@ -7,7 +7,7 @@ const BACKEND = process.env.E2E_BACKEND_URL || "http://127.0.0.1:4000";
 
 /** Reset + reseed the demo data before the API suite runs. */
 export default async function globalSetup(): Promise<void> {
-  execFileSync("yarn", ["workspace", "backend", "prisma:reset"], {
+  execFileSync("pnpm", ["--filter", "backend", "prisma:reset"], {
     cwd: ROOT,
     stdio: "inherit",
     env: process.env,

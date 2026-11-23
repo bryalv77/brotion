@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import type { BlockType } from "@notion-clone/shared";
 import {
   Code,
+  Database,
   Heading1,
   Heading2,
   Heading3,
@@ -18,27 +19,29 @@ import {
   type LucideIcon,
 } from "lucide-react-native";
 import { Button, Input } from "@/components/ui";
+import { createStarterDatabase } from "./starterDatabase";
 import { colors } from "@/lib/theme";
 import { useSearchResults } from "@/components/QuickSearch";
 
 /** What the menu asks the Editor to do to the current block. */
 export interface BlockConversion {
-  type: BlockType;
+  type: BlockType | "database";
   /** Filled in for types that need more than plain text. */
-  extras?: { url?: string; pageId?: string; title?: string };
+  extras?: { url?: string; pageId?: string; title?: string; databaseId?: string };
 }
 
 export interface SlashMenuProps {
   visible: boolean;
   onClose: () => void;
   onSelect: (conversion: BlockConversion) => void;
+  pageId: string;
 }
 
 interface MenuItem {
   group: "Basic" | "Lists" | "Media";
   label: string;
   icon: LucideIcon;
-  type: BlockType;
+  type: BlockType | "database";
   needsFields?: "image" | "page_ref";
 }
 
@@ -57,10 +60,11 @@ const ITEMS: MenuItem[] = [
   { label: "Code", icon: Code, group: "Basic", type: "code" },
   { label: "Divider", icon: Minus, group: "Basic", type: "divider" },
   { label: "Image", icon: ImageIcon, group: "Media", type: "image", needsFields: "image" },
+  { label: "Database", icon: Database, group: "Media", type: "database" },
   { label: "Page reference", icon: LinkIcon, group: "Media", type: "page_ref", needsFields: "page_ref" },
 ];
 
-export function SlashMenu({ visible, onClose, onSelect }: SlashMenuProps) {
+export function SlashMenu({ visible, onClose, onSelect, pageId }: SlashMenuProps) {
   const [pending, setPending] = useState<"image" | "page_ref" | null>(null);
   const [url, setUrl] = useState("");
   const [query, setQuery] = useState("");
@@ -79,6 +83,11 @@ export function SlashMenu({ visible, onClose, onSelect }: SlashMenuProps) {
   function choose(item: MenuItem) {
     if (item.needsFields) {
       setPending(item.needsFields);
+      return;
+    }
+    if (item.type === "database") {
+      void createStarterDatabase(pageId).then((databaseId) => onSelect({ type: "database", extras: { databaseId } }));
+      onClose();
       return;
     }
     onSelect({ type: item.type });

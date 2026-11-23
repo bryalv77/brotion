@@ -101,6 +101,12 @@ export interface PageRefContent {
   icon?: string;
 }
 
+// Database — an inline database block; the data lives in the Database model.
+export interface DatabaseBlockContent {
+  type: "database";
+  database_id: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Table — represented as a parent "table" block + N "table_row" child blocks.
 // This keeps each row independently editable/reorderable and lets comments
@@ -136,6 +142,7 @@ export type BlockContent =
   | CodeContent
   | ImageContent
   | PageRefContent
+  | DatabaseBlockContent
   | TableContent
   | TableRowContent;
 

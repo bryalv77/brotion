@@ -9,7 +9,7 @@
  * reference. Also checks every template `id` is unique across the registry
  * (it doubles as the `:templateId` route param).
  *
- * Run via `yarn workspace backend test:unit`.
+ * Run via `pnpm --filter backend test:unit`.
  */
 import test from "node:test";
 import assert from "node:assert/strict";

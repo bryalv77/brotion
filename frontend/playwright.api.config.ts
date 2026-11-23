@@ -7,7 +7,7 @@ import path from "node:path";
  * browser UI. Run with:
  *
  *   DATABASE_URL=postgresql://notion:notion@127.0.0.1:5433/notion_clone \
- *     yarn workspace frontend test:api
+ *     pnpm --filter frontend test:api
  */
 const BACKEND = process.env.E2E_BACKEND_URL || "http://127.0.0.1:4000";
 
@@ -27,7 +27,7 @@ export default defineConfig({
     baseURL: BACKEND,
   },
   webServer: {
-    command: "yarn e2e:server:backend",
+    command: "pnpm e2e:server:backend",
     url: `${BACKEND}/api/v1/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 90_000,

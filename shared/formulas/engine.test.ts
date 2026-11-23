@@ -1,7 +1,7 @@
 /**
  * Unit tests for the formula engine. Run via Node's built-in test runner:
  *
- *   yarn workspace backend test:unit    (added to package.json)
+ *   pnpm --filter backend test:unit    (added to package.json)
  *
  * which is `node --test --import tsx src/modules/formulas/engine.test.ts`.
  */

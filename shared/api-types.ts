@@ -55,7 +55,8 @@ export type BlockType =
   | "image"
   | "table"
   | "table_row"
-  | "page_ref";
+  | "page_ref"
+  | "database";
 export type ShareType = "USER" | "PUBLIC_LINK";
 export type PageAccess = "OWNER" | "EDITOR" | "VIEWER";
 export type PropertyType =

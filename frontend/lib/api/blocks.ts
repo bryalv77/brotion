@@ -32,3 +32,14 @@ export function updateBlock(
 export function deleteBlock(blockId: string): Promise<void> {
   return request<void>(`blocks/${blockId}`, { method: "DELETE" });
 }
+
+/** Move a block between two siblings (either anchor may be omitted at the ends). */
+export function reorderBlock(
+  pageId: string,
+  body: { block_id: string; before_id?: string; after_id?: string },
+): Promise<BlockDTO> {
+  return request<{ block: BlockDTO }>(`pages/${pageId}/blocks/reorder`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then((r) => r.block);
+}

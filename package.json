@@ -2,27 +2,22 @@
   "name": "notion-clone",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "backend",
-    "shared"
-  ],
   "scripts": {
-    "dev": "concurrently -n frontend,backend -c blue,green \"yarn dev:frontend\" \"yarn dev:backend\"",
-    "dev:frontend": "yarn workspace frontend web",
-    "dev:backend": "yarn workspace backend dev",
-    "web": "yarn workspace frontend web",
-    "ios": "yarn workspace frontend ios",
-    "android": "yarn workspace frontend android",
-    "build": "yarn workspaces run build",
-    "start": "yarn workspace backend start",
-    "migrate": "yarn workspace backend prisma:migrate",
-    "seed": "yarn workspace backend prisma:seed",
+    "dev": "concurrently -n frontend,backend -c blue,green \"pnpm dev:frontend\" \"pnpm dev:backend\"",
+    "dev:frontend": "pnpm --filter frontend web",
+    "dev:backend": "pnpm --filter backend dev",
+    "web": "pnpm --filter frontend web",
+    "ios": "pnpm --filter frontend ios",
+    "android": "pnpm --filter frontend android",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter backend start",
+    "migrate": "pnpm --filter backend prisma:migrate",
+    "seed": "pnpm --filter backend prisma:seed",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
-    "typecheck": "yarn workspaces run typecheck",
-    "test:api": "yarn workspace frontend test:api",
-    "test:e2e": "yarn workspace frontend test:e2e"
+    "typecheck": "pnpm -r typecheck",
+    "test:api": "pnpm --filter frontend test:api",
+    "test:e2e": "pnpm --filter frontend test:e2e"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",
@@ -36,5 +31,5 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "pnpm@12.18.0"
 }

@@ -42,6 +42,7 @@ export function blockToText(block: BlockDTO): string {
       return c.title;
     case "divider":
     case "table":
+    case "database":
       return "";
     case "image":
       return richTextToPlainText(c.caption);
@@ -139,6 +140,9 @@ export function textToContent(
       }
       return { type, page_id: "", title: text || "Untitled" };
     }
+
+    case "database":
+      return { type, database_id: old && old.type === "database" ? old.database_id : "" };
 
     case "table": {
       if (old && old.type === "table") {

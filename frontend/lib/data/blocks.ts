@@ -6,4 +6,4 @@ import { route } from "./mode";
 export type { BlockType };
 
 /** Guest → local store, signed-in user → API. */
-export const { createBlock, updateBlock, deleteBlock } = route<typeof api>(local, api);
+export const { createBlock, updateBlock, deleteBlock, reorderBlock } = route<typeof api>(local, api);

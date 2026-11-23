@@ -5,5 +5,5 @@ build
 **/test-results
 backend/prisma/migrations
 pnpm-lock.yaml
-yarn.lock
+pnpm-lock.yaml
 package-lock.json
