@@ -455,7 +455,7 @@ export interface CreatePageRequest {
 
 export interface UpdatePageRequest {
   title?: string;
-  icon?: string;
+  icon?: string | null;
   cover_url?: string;
   // parent_id is accepted for reparenting (the move flow), though the canonical
   // path is POST /pages/:id/move via MovePageRequest, which also enforces the

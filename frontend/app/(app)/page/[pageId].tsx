@@ -5,11 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getPage, updatePage } from "@/lib/data/pages";
 import { qk } from "@/lib/queryClient";
 import { usePageBreadcrumbs } from "@/hooks/usePageBreadcrumbs";
+import { dragScroll } from "@/features/editor/BlockRow";
 import { Editor, type EditorHandle } from "@/features/editor/Editor";
 import { PageDatabases } from "@/components/PageDatabases";
 import { FeaturedStar } from "@/components/FeaturedStar";
 import { PageMenu } from "@/components/PageMenu";
 import { PageAttachments } from "@/components/PageAttachments";
+import { PageIcon } from "@/components/PageIcon";
+import { IconPicker } from "@/components/IconPicker";
 import { H1, Input, Loading, Muted, ErrorBanner } from "@/components/ui";
 
 export default function PageScreen() {
@@ -17,6 +20,7 @@ export default function PageScreen() {
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
+  const [pickingIcon, setPickingIcon] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -31,6 +35,15 @@ export default function PageScreen() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.page(pageId) });
       void qc.invalidateQueries({ queryKey: qk.childPages }); // sidebar tree + featured
+      void qc.invalidateQueries({ queryKey: ["breadcrumbs"] });
+    },
+  });
+
+  const setIcon = useMutation({
+    mutationFn: (icon: string | null) => updatePage(pageId!, { icon }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.page(pageId) });
+      void qc.invalidateQueries({ queryKey: qk.childPages });
       void qc.invalidateQueries({ queryKey: ["breadcrumbs"] });
     },
   });
@@ -57,7 +70,15 @@ export default function PageScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-surface" contentContainerClassName="mx-auto w-full max-w-3xl flex-grow px-5 pt-8">
+    <ScrollView
+      ref={(r) => {
+        dragScroll.scrollTo = r ? (y) => r.scrollTo({ y, animated: false }) : null;
+      }}
+      onScroll={(e) => {
+        dragScroll.y = e.nativeEvent.contentOffset.y;
+      }}
+      scrollEventThrottle={16}
+      className="flex-1 bg-surface" contentContainerClassName="mx-auto w-full max-w-3xl flex-grow px-5 pt-8">
       <View className="mb-4 flex-row items-center justify-between gap-2">
         <View className="flex-1 flex-row flex-wrap items-center gap-1">
           {breadcrumbs?.map((crumb, i) => (
@@ -66,11 +87,9 @@ export default function PageScreen() {
               onPress={() => router.push(`/(app)/page/${crumb.id}`)}
               className="flex-row items-center gap-1"
             >
-              <Muted className="text-xs">
-                {i > 0 ? " / " : ""}
-                {crumb.icon ? `${crumb.icon} ` : ""}
-                {crumb.title || "Untitled"}
-              </Muted>
+              <Muted className="text-xs">{i > 0 ? " / " : ""}</Muted>
+              <PageIcon icon={crumb.icon} size={12} />
+              <Muted className="text-xs">{crumb.title || "Untitled"}</Muted>
             </Pressable>
           ))}
         </View>
@@ -79,6 +98,21 @@ export default function PageScreen() {
           <PageMenu pageId={page.id} />
         </View>
       </View>
+
+      <Pressable
+        onPress={() => setPickingIcon(true)}
+        accessibilityRole="button"
+        accessibilityLabel={page.icon ? "Change icon" : "Add icon"}
+        className="mb-2 h-14 w-14 items-center justify-center self-start rounded-xl active:bg-surface-hover"
+      >
+        {page.icon ? <PageIcon icon={page.icon} size={44} /> : <Muted className="text-xs">Add icon</Muted>}
+      </Pressable>
+      <IconPicker
+        open={pickingIcon}
+        pageId={page.id}
+        onClose={() => setPickingIcon(false)}
+        onPick={(icon) => setIcon.mutate(icon)}
+      />
 
       {editingTitle ? (
         <Input
@@ -91,7 +125,7 @@ export default function PageScreen() {
         />
       ) : (
         <Pressable onPress={() => setEditingTitle(true)} accessibilityRole="button">
-          <H1>{page.icon ? `${page.icon} ` : ""}{page.title || "Untitled"}</H1>
+          <H1>{page.title || "Untitled"}</H1>
         </Pressable>
       )}
 

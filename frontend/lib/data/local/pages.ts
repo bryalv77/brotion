@@ -105,7 +105,7 @@ export async function createPage(
 
 export async function updatePage(
   pageId: string,
-  body: { title?: string; icon?: string; cover_url?: string; parent_id?: string | null },
+  body: { title?: string; icon?: string | null; cover_url?: string; parent_id?: string | null },
 ): Promise<PageDTO> {
   const store = getLocalStore();
   const page = await requirePage(pageId);

@@ -1,14 +1,15 @@
 {
   "expo": {
-    "name": "Notion Clone",
-    "slug": "notion-clone",
+    "name": "Notuno",
+    "slug": "notuno",
     "version": "0.1.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "scheme": "notionclone",
+    "scheme": "notuno",
     "web": {
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -19,11 +20,31 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bryalv77.notionclone"
+      "bundleIdentifier": "com.devalv.notuno",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "edgeToEdge": true,
-      "package": "com.bryalv77.notionclone"
-    }
+      "package": "com.devalv.notuno",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2383e2"
+      }
+    },
+    "icon": "./assets/icon.png",
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "46063bd8-d718-4310-8425-079ea4e1a3af"
+      }
+    },
+    "owner": "bryalv77"
   }
 }

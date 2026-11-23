@@ -1,0 +1,40 @@
+default_platform(:ios)
+
+BUNDLE_ID = "com.devalv.notuno"
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['ASC_KEY_ID']}.p8"),
+  )
+end
+
+platform :ios do
+  desc "Register bundle id + create distribution cert/profile for local EAS build"
+  lane :signing do
+    key = asc_key
+    unless Spaceship::ConnectAPI::BundleId.all(filter: { identifier: BUNDLE_ID }).any? { |b| b.identifier == BUNDLE_ID }
+      Spaceship::ConnectAPI::BundleId.create(name: "Notuno", identifier: BUNDLE_ID, platform: "IOS")
+    end
+    cert(api_key: key, output_path: "build/signing", team_id: ENV["APPLE_TEAM_ID"])
+    sigh(api_key: key, app_identifier: BUNDLE_ID, output_path: "build/signing", team_id: ENV["APPLE_TEAM_ID"])
+  end
+
+  desc "Upload the IPA to TestFlight"
+  lane :beta do |opts|
+    upload_to_testflight(api_key: asc_key, ipa: opts[:ipa], skip_waiting_for_build_processing: true)
+  end
+end
+
+lane :app_check do
+  asc_key
+  apps = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+  UI.important(apps ? "ASC app exists: #{apps.name} (#{apps.id})" : "NO ASC app record for #{BUNDLE_ID}")
+end
+
+lane :builds do
+  asc_key
+  app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+  app.get_builds(limit: 5).each { |b| UI.important("build #{b.version} state=#{b.processing_state} uploaded=#{b.uploaded_date}") }
+end

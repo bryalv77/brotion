@@ -69,7 +69,7 @@ async function main(): Promise<void> {
           rich_text: [
             {
               kind: "text",
-              text: "Welcome to your Notion clone. Start writing here.",
+              text: "Welcome to Notuno. Start writing here.",
             },
           ],
         },

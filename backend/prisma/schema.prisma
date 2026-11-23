@@ -1,4 +1,4 @@
-// Notion Clone — Prisma schema.
+// Notuno — Prisma schema.
 //
 // Task 3 adds workspaces, membership, pages (tree), blocks, attachments, and
 // the search-text denormalization. Sharing/comments/permissions land in Task 4.

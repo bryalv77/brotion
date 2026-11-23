@@ -1,0 +1,10 @@
+{
+  "cli": { "appVersionSource": "local" },
+  "build": {
+    "production": {
+      "distribution": "store",
+      "ios": { "credentialsSource": "local" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://notion-clone-api.bryalv77.workers.dev" }
+    }
+  }
+}

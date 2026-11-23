@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <Menu size={20} strokeWidth={1.5} color={colors.ink} />
         </Pressable>
-        <Text className="ml-3 text-base font-medium text-ink">Notion</Text>
+        <Text className="ml-3 text-base font-medium text-ink">Notuno</Text>
       </View>
 
       <View className="flex-1">{children}</View>

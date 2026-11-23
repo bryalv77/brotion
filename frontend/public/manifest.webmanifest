@@ -1,6 +1,6 @@
 {
-  "name": "Notion Clone",
-  "short_name": "Notion",
+  "name": "Notuno",
+  "short_name": "Notuno",
   "description": "Your notes, saved on this device. Sign in optionally to sync everywhere.",
   "id": "/",
   "start_url": "/",

@@ -10,7 +10,7 @@ import { useToast } from "@/stores/toast";
 import { SortMenu } from "@/components/SortMenu";
 import { useSidebarPrefs, type PageSort } from "@/stores/sidebarPrefs";
 import { PageMenu } from "@/components/PageMenu";
-import { PageGlyph } from "@/components/ui";
+import { PageIcon } from "@/components/PageIcon";
 import { colors } from "@/lib/theme";
 import { friendlyError } from "@/lib/friendlyError";
 
@@ -185,7 +185,7 @@ function PageTreeNode({
           accessibilityRole="button"
           className="min-h-6 flex-1 flex-row items-center gap-2"
         >
-          {page.icon ? <Text className="text-sm">{page.icon}</Text> : <PageGlyph />}
+          <PageIcon icon={page.icon} />
           <Text
             numberOfLines={1}
             className={`flex-1 text-sm ${active ? "font-medium text-ink" : "text-ink"}`}

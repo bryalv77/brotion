@@ -45,7 +45,7 @@ export function createApp(bindings: Pick<AppBindings, "CLIENT_ORIGIN">): Hono<Ap
     }),
   );
 
-  app.get("/", (c) => c.json({ name: "notion-clone-backend", status: "running" }));
+  app.get("/", (c) => c.json({ name: "notuno-backend", status: "running" }));
 
   const api = "/api/v1";
   app.route(`${api}/health`, healthRoutes);

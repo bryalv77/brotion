@@ -38,7 +38,7 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="theme-color" content="#1a6fc4" />
-        <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+        <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <ScrollViewStyleReset />
         {headNodes}

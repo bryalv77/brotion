@@ -1,6 +1,6 @@
-# Notion Clone
+# Notuno
 
-A Notion clone: one Expo app for web, iOS and Android, a Hono API, and PostgreSQL.
+Notuno: one Expo app for web, iOS and Android, a Hono API, and PostgreSQL.
 
 - **Web:** https://notion-clone-web.pages.dev
 - **API:** https://notion-clone-api.bryalv77.workers.dev (Cloudflare Workers + Neon)

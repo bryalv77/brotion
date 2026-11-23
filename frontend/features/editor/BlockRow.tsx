@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  Animated,
+  Dimensions,
   Image,
+  PanResponder,
   Platform,
   Pressable,
   ScrollView,
@@ -8,6 +11,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import type { BlockDTO } from "@notion-clone/shared";
 import { colors } from "@/lib/theme";
 import { DatabaseView } from "@/components/DatabaseView";
@@ -50,6 +54,14 @@ const TEXT_STYLES: Record<string, string> = {
 
 /** Id of the block currently being dragged (one drag at a time, shared across rows). */
 let draggingId: string | null = null;
+/** Mounted rows by block id, so a native drag can hit-test the drop target. */
+const rowRefs = new Map<string, any>();
+/** Set by the page's ScrollView so a drag can auto-scroll it near the screen edges. */
+export const dragScroll = { y: 0, scrollTo: null as ((y: number) => void) | null };
+const EDGE = 100;
+// Text line height + the input's py-1, so the controls center on the first line.
+const LINE: Record<string, number> = { heading1: 36, heading2: 32, heading3: 28 };
+const CTRL_H: Record<string, number> = { heading1: 44, heading2: 40, heading3: 36 };
 
 export function BlockRow({
   block,
@@ -95,6 +107,67 @@ export function BlockRow({
   const [dropPos, setDropPos] = useState<"before" | "after" | null>(null);
   const moveRef = useRef(onMove);
   moveRef.current = onMove;
+
+  // Native reorder: drag the grip, drop on the row under the finger.
+  const dragY = useRef(new Animated.Value(0)).current;
+  const [dragging, setDragging] = useState(false);
+  const idRef = useRef(block.id);
+  idRef.current = block.id;
+  useEffect(() => {
+    rowRefs.set(block.id, rowRef);
+    return () => void rowRefs.delete(block.id);
+  }, [block.id]);
+  const drag = useRef({ active: false, timer: undefined as any, tick: undefined as any, startScroll: 0, dy: 0, moveY: 0 }).current;
+  const stopDrag = () => {
+    clearTimeout(drag.timer);
+    clearInterval(drag.tick);
+    drag.active = false;
+    setDragging(false);
+    dragY.setValue(0);
+  };
+  const pan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      // Long-press (250ms) to pick the row up, so a stray touch on the grip does nothing.
+      onPanResponderGrant: () => {
+        drag.timer = setTimeout(() => {
+          drag.active = true;
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          drag.startScroll = dragScroll.y;
+          setDragging(true);
+          // Auto-scroll while the finger is near the top/bottom edge.
+          drag.tick = setInterval(() => {
+            const h = Dimensions.get("window").height;
+            const step = drag.moveY < EDGE ? -12 : drag.moveY > h - EDGE ? 12 : 0;
+            if (step && dragScroll.scrollTo) {
+              dragScroll.scrollTo(Math.max(0, dragScroll.y + step));
+              dragY.setValue(drag.dy + dragScroll.y - drag.startScroll);
+            }
+          }, 16);
+        }, 250);
+      },
+      onPanResponderMove: (_, g) => {
+        drag.dy = g.dy;
+        drag.moveY = g.moveY;
+        if (drag.active) dragY.setValue(g.dy + dragScroll.y - drag.startScroll);
+      },
+      onPanResponderRelease: (_, g) => {
+        const wasActive = drag.active;
+        stopDrag();
+        if (wasActive) Haptics.selectionAsync().catch(() => {});
+        if (!wasActive) return;
+        const self = idRef.current;
+        for (const [id, ref] of rowRefs) {
+          if (id === self) continue;
+          ref.current?.measureInWindow((_x: number, y: number, _w: number, h: number) => {
+            if (g.moveY >= y && g.moveY < y + h) moveRef.current(self, id, g.moveY < y + h / 2 ? "before" : "after");
+          });
+        }
+      },
+      onPanResponderTerminate: stopDrag,
+    }),
+  ).current;
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const row = rowRef.current as HTMLElement | null;
@@ -204,7 +277,7 @@ export function BlockRow({
       placeholder={isCode ? "// code" : "Type / for blocks"}
       placeholderTextColor={colors.placeholder}
       className={`flex-1 py-1 ${TEXT_STYLES[block.type] ?? "text-base text-ink"}`}
-      style={isCode ? { minHeight: 150, textAlignVertical: "top" } : undefined}
+      style={isCode ? { minHeight: 150, textAlignVertical: "top" } : { lineHeight: LINE[block.type] ?? 24 }}
     />
   );
 
@@ -361,12 +434,14 @@ export function BlockRow({
     );
   }
 
+  const CTRL = { width: 28, height: CTRL_H[block.type] ?? 32, alignItems: "center", justifyContent: "center" } as const;
   return (
-    <View
+    <Animated.View
       ref={rowRef}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       className="py-1"
+      style={dragging ? { transform: [{ translateY: dragY }], opacity: 0.6, zIndex: 10 } : undefined}
     >
       {dropPos ? (
         <View
@@ -375,19 +450,22 @@ export function BlockRow({
           style={dropPos === "before" ? { top: 0 } : { bottom: 0 }}
         />
       ) : null}
-      <View className="flex-row items-start gap-2">
+      <View className="flex-row items-start gap-1">
         {Platform.OS === "web" ? (
-          <View ref={handleRef} accessibilityLabel="Drag to reorder" className="h-8 items-center justify-center" style={[chromeStyle, { cursor: "grab" } as object]}>
+          <View ref={handleRef} accessibilityLabel="Drag to reorder" style={[CTRL, chromeStyle, { cursor: "grab" } as object]}>
             <GripVertical size={18} strokeWidth={1.5} color={colors.inkFaint} />
           </View>
-        ) : null}
+        ) : (
+          <View accessibilityLabel="Drag to reorder" style={CTRL} {...pan.panHandlers}>
+            <GripVertical size={18} strokeWidth={1.5} color={colors.inkFaint} />
+          </View>
+        )}
         <Pressable
           onPress={() => setMenuVisible(true)}
           accessibilityRole="button"
           accessibilityLabel="Change block type"
-          hitSlop={12}
-          className="h-8 items-center justify-center"
-          style={chromeStyle}
+          hitSlop={8}
+          style={[CTRL, chromeStyle]}
           {...chromeFocus}
         >
           <Plus size={18} strokeWidth={1.5} color={colors.inkFaint} />
@@ -398,12 +476,11 @@ export function BlockRow({
           onPress={() => onDelete(block.id)}
           accessibilityRole="button"
           accessibilityLabel="Delete block"
-          hitSlop={12}
-          className="h-8 items-center justify-center px-1"
-          style={chromeStyle}
+          hitSlop={8}
+          style={[CTRL, chromeStyle]}
           {...chromeFocus}
         >
-          <X size={16} strokeWidth={1.5} color={colors.inkFaint} />
+          <X size={18} strokeWidth={1.5} color={colors.inkFaint} />
         </Pressable>
       </View>
 
@@ -419,7 +496,7 @@ export function BlockRow({
         onClose={() => setMenuVisible(false)}
         onSelect={(conversion) => onConvert(block.id, conversion)}
       />
-    </View>
+    </Animated.View>
   );
 }
 

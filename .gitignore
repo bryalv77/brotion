@@ -63,3 +63,6 @@ build/
 
 # graphify hook session cache
 **/graphify-out/cache/hook_sessions/
+
+frontend/fastlane/build/
+frontend/credentials.json

@@ -6,7 +6,7 @@ import { getPage } from "@/lib/data/pages";
 import { qk } from "@/lib/queryClient";
 import { useSidebarPrefs } from "@/stores/sidebarPrefs";
 import { colors } from "@/lib/theme";
-import { PageGlyph } from "@/components/ui";
+import { PageIcon } from "@/components/PageIcon";
 
 /** Starred pages, listed above the tree. Hidden when empty. */
 export function FeaturedPages() {
@@ -28,7 +28,7 @@ export function FeaturedPages() {
           accessibilityRole="button"
           className="flex-row items-center gap-2 rounded-md px-2 py-2 active:bg-surface-hover"
         >
-          {page.icon ? <Text className="text-sm">{page.icon}</Text> : <PageGlyph />}
+          <PageIcon icon={page.icon} />
           <Text numberOfLines={1} className="flex-1 text-sm text-ink">
             {page.title || "Untitled"}
           </Text>

@@ -15,7 +15,8 @@
     "test:api": "playwright test --config playwright.api.config.ts",
     "test:e2e": "playwright test --config playwright.web.config.ts",
     "e2e:server:backend": "pnpm --filter backend build && NODE_ENV=test pnpm --filter backend start",
-    "e2e:server:frontend": "CI=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:4000 expo start --web --port 8092"
+    "e2e:server:frontend": "CI=1 EXPO_PUBLIC_API_URL=http://127.0.0.1:4000 expo start --web --port 8092",
+    "eas-build-post-install": "pnpm --filter @notion-clone/shared build"
   },
   "dependencies": {
     "@expo/metro-runtime": "*",
@@ -26,6 +27,7 @@
     "expo-constants": "*",
     "expo-document-picker": "*",
     "expo-file-system": "*",
+    "expo-haptics": "~58.0.8",
     "expo-image-picker": "*",
     "expo-linking": "*",
     "expo-router": "~58.0.31",
