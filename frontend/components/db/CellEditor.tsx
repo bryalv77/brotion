@@ -1,3 +1,4 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -125,7 +126,7 @@ export function CellEditor({
         </Text>
       </Pressable>
 
-      <Modal
+      <ThemedModal
         visible={open}
         animationType="fade"
         transparent
@@ -136,7 +137,7 @@ export function CellEditor({
           onPress={() => setOpen(false)}
         >
           <Pressable
-            className="max-h-[85%] gap-3 rounded-t-2xl bg-white p-5"
+            className="max-h-[85%] gap-3 rounded-t-2xl bg-surface p-5"
             onPress={(event) => event.stopPropagation()}
           >
             <H2>{property.name}</H2>
@@ -155,7 +156,7 @@ export function CellEditor({
               >
                 <View
                   className={`h-6 w-6 items-center justify-center rounded border ${
-                    boolDraft ? "border-accent bg-accent" : "border-inkFaint bg-white"
+                    boolDraft ? "border-accent bg-accent" : "border-inkFaint bg-surface"
                   }`}
                 >
                   {boolDraft ? <Check size={16} strokeWidth={1.5} color="#fff" /> : null}
@@ -252,7 +253,7 @@ export function CellEditor({
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      </ThemedModal>
     </>
   );
 }

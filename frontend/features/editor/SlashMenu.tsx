@@ -1,9 +1,12 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import { useEffect, useState } from "react";
+import { router } from "expo-router";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import type { BlockType } from "@notion-clone/shared";
 import {
   Code,
   Database,
+  FilePlus,
   Heading1,
   Heading2,
   Heading3,
@@ -21,6 +24,8 @@ import {
 import { Button, Input } from "@/components/ui";
 import { createStarterDatabase } from "./starterDatabase";
 import { colors } from "@/lib/theme";
+import { getPage, createPage } from "@/lib/data/pages";
+import { queryClient, qk } from "@/lib/queryClient";
 import { useSearchResults } from "@/components/QuickSearch";
 
 /** What the menu asks the Editor to do to the current block. */
@@ -43,6 +48,8 @@ interface MenuItem {
   icon: LucideIcon;
   type: BlockType | "database";
   needsFields?: "image" | "page_ref";
+  /** Creates a real child page and links to it, instead of picking an existing one. */
+  createsChild?: boolean;
 }
 
 // Opened from the "+" on each row, or by typing "/" into an empty text block
@@ -61,6 +68,7 @@ const ITEMS: MenuItem[] = [
   { label: "Divider", icon: Minus, group: "Basic", type: "divider" },
   { label: "Image", icon: ImageIcon, group: "Media", type: "image", needsFields: "image" },
   { label: "Database", icon: Database, group: "Media", type: "database" },
+  { label: "Subpage", icon: FilePlus, group: "Media", type: "page_ref", createsChild: true },
   { label: "Page reference", icon: LinkIcon, group: "Media", type: "page_ref", needsFields: "page_ref" },
 ];
 
@@ -85,6 +93,16 @@ export function SlashMenu({ visible, onClose, onSelect, pageId }: SlashMenuProps
       setPending(item.needsFields);
       return;
     }
+    if (item.createsChild) {
+      void getPage(pageId)
+        .then(({ page }) => createPage(page.workspace_id, { title: "Untitled", parent_id: pageId }))
+        .then((child) => {
+          void queryClient.invalidateQueries({ queryKey: qk.childPages });
+          router.push(`/(app)/page/${child.id}`);
+        });
+      onClose();
+      return;
+    }
     if (item.type === "database") {
       void createStarterDatabase(pageId).then((databaseId) => onSelect({ type: "database", extras: { databaseId } }));
       onClose();
@@ -104,13 +122,13 @@ export function SlashMenu({ visible, onClose, onSelect, pageId }: SlashMenuProps
   }
 
   return (
-    <Modal
+    <ThemedModal
       visible={visible}
       animationType="slide"
       onRequestClose={onClose}
       presentationStyle="pageSheet"
     >
-      <View className="flex-1 bg-white px-5 pt-5">
+      <View className="flex-1 bg-surface px-5 pt-5">
         <View className="mb-3 flex-row items-center justify-between">
           <Text className="text-lg font-medium text-ink">
             {pending === "image"
@@ -192,7 +210,7 @@ export function SlashMenu({ visible, onClose, onSelect, pageId }: SlashMenuProps
                   <Text className="px-3 pb-1 pt-2 text-xs text-inkLight">{group}</Text>
                   {items.map((item) => (
                     <Pressable
-                      key={item.type}
+                      key={item.label}
                       onPress={() => choose(item)}
                       accessibilityRole="button"
                       className="min-h-11 flex-row items-center gap-3 rounded-lg px-3 py-2 active:bg-surface-hover"
@@ -207,6 +225,6 @@ export function SlashMenu({ visible, onClose, onSelect, pageId }: SlashMenuProps
           </ScrollView>
         )}
       </View>
-    </Modal>
+    </ThemedModal>
   );
 }

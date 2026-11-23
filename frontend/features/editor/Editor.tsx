@@ -390,7 +390,7 @@ export const Editor = forwardRef<EditorHandle, { pageId: string; initialBlocks: 
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-white"
+      className="flex-1 bg-surface"
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
@@ -401,7 +401,7 @@ export const Editor = forwardRef<EditorHandle, { pageId: string; initialBlocks: 
         {saveState !== "idle" ? (
           <Text
             accessibilityLiveRegion="polite"
-            className="px-4 pb-2 text-right text-xs text-inkLight"
+            className="pb-2 text-right text-xs text-inkLight"
           >
             {saveState === "saving" ? "Saving…" : "Saved"}
           </Text>
@@ -424,14 +424,14 @@ export const Editor = forwardRef<EditorHandle, { pageId: string; initialBlocks: 
             }}
             accessibilityRole="button"
             hitSlop={12}
-            className="mx-4 mb-2 min-h-11 justify-center self-start"
+            className="mb-2 min-h-11 justify-center self-start"
           >
             <Text className="text-sm font-medium text-accent">Retry saving</Text>
           </Pressable>
         ) : null}
 
         {rows.length === 0 ? (
-          <Pressable onPress={() => insertParagraph()} accessibilityRole="button" className="px-4 py-6">
+          <Pressable onPress={() => insertParagraph()} accessibilityRole="button" className="py-6">
             <Text className="text-base text-inkFaint">Click here to start writing</Text>
           </Pressable>
         ) : null}

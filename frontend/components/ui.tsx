@@ -21,7 +21,7 @@ export function Screen({
 }: ViewProps & { children: React.ReactNode; centered?: boolean; className?: string }) {
   return (
     <SafeAreaView
-      className={`flex-1 bg-white ${centered ? "items-center justify-center" : ""} ${className}`}
+      className={`flex-1 bg-surface ${centered ? "items-center justify-center" : ""} ${className}`}
       {...rest}
     >
       {children}
@@ -39,7 +39,7 @@ export function ScrollScreen({
   contentClassName?: string;
 }) {
   return (
-    <ScrollView className={`flex-1 bg-white ${className}`} contentContainerClassName={`p-5 ${contentClassName}`}>
+    <ScrollView className={`flex-1 bg-surface ${className}`} contentContainerClassName={`p-5 ${contentClassName}`}>
       {children}
     </ScrollView>
   );
@@ -103,7 +103,7 @@ export function Input({
   return (
     <TextInput
       placeholderTextColor={colors.inkFaint}
-      className={`h-11 rounded-lg border border-border bg-white px-3 text-base text-ink ${className}`}
+      className={`h-11 rounded-lg border border-border bg-surface px-3 text-base text-ink ${className}`}
       {...props}
     />
   );
@@ -152,7 +152,7 @@ export function PageGlyph({ size = 16 }: { size?: number }) {
 
 export function Keycap({ children }: { children: React.ReactNode }) {
   return (
-    <View className="rounded border border-border bg-white px-1">
+    <View className="rounded border border-border bg-surface px-1">
       <Text className="text-xs text-inkLight" style={{ fontVariant: ["tabular-nums"] }}>
         {children}
       </Text>

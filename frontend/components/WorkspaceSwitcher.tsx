@@ -1,3 +1,4 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
@@ -82,7 +83,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
         <ChevronDown size={14} strokeWidth={1.5} color={colors.inkFaint} />
       </Pressable>
 
-      <Modal
+      <ThemedModal
         visible={open}
         transparent
         animationType="fade"
@@ -96,7 +97,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
             className="absolute inset-0"
           />
           <View
-            className="w-full max-w-sm rounded-xl bg-white p-4"
+            className="w-full max-w-sm rounded-xl bg-surface p-4"
             style={{ maxWidth: 360, shadowColor: "#37352f", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 4 }}
           >
             <Text className="mb-3 text-base font-medium text-ink">Workspaces</Text>
@@ -164,7 +165,7 @@ export function WorkspaceSwitcher({ workspaceId }: { workspaceId?: string }) {
             <Button title="Cancel" variant="secondary" onPress={() => setOpen(false)} className="mt-1" />
           </View>
         </View>
-      </Modal>
+      </ThemedModal>
     </View>
   );
 }

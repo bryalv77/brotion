@@ -1,12 +1,15 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
+import { Search, X } from "lucide-react-native";
 import { router, usePathname } from "expo-router";
 import { colors } from "@/lib/theme";
 import type { SearchResultDTO } from "@notion-clone/shared";
@@ -90,10 +93,25 @@ export function QuickSearch() {
     close();
   }
 
+  // Cmd/Ctrl+K toggles search (web only).
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        const open = useUI.getState().quickSearchOpen;
+        if (open) close();
+        else setQuickSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const trimmed = query.trim();
 
   return (
-    <Modal
+    <ThemedModal
       visible={quickSearchOpen}
       transparent
       animationType="fade"
@@ -109,7 +127,7 @@ export function QuickSearch() {
           className="absolute inset-0"
         />
         <View
-          className="w-full overflow-hidden rounded-xl border border-border bg-white"
+          className="w-full overflow-hidden rounded-xl border border-border bg-surface"
           style={{
             maxWidth: 520,
             shadowColor: "#37352f",
@@ -119,14 +137,31 @@ export function QuickSearch() {
             elevation: 4,
           }}
         >
-          <Input
-            autoFocus
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search"
-            returnKeyType="search"
-            className="rounded-none border-0 border-b border-border px-4"
-          />
+          <View className="flex-row items-center justify-between border-b border-border px-4 py-2">
+            <Text className="text-sm font-medium text-ink">Search</Text>
+            <Pressable
+              onPress={close}
+              accessibilityRole="button"
+              accessibilityLabel="Close search"
+              hitSlop={8}
+              className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
+            >
+              <X size={18} strokeWidth={1.5} color={colors.inkLight} />
+            </Pressable>
+          </View>
+
+          <View className="flex-row items-center gap-2 border-b border-border px-4">
+            <Search size={16} strokeWidth={1.5} color={colors.inkFaint} />
+            <Input
+              autoFocus
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search pages…"
+              returnKeyType="search"
+              className="flex-1 rounded-none border-0 bg-transparent px-0"
+              style={{ outlineStyle: "none" } as object}
+            />
+          </View>
 
           <View className="min-h-[96px] max-h-80">
             {!trimmed ? (
@@ -168,6 +203,6 @@ export function QuickSearch() {
           </View>
         </View>
       </View>
-    </Modal>
+    </ThemedModal>
   );
 }

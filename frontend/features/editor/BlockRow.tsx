@@ -12,6 +12,7 @@ import type { BlockDTO } from "@notion-clone/shared";
 import { colors } from "@/lib/theme";
 import { DatabaseView } from "@/components/DatabaseView";
 import { PageGlyph } from "@/components/ui";
+import { PageRefCard } from "./PageRefCard";
 import { blockToText, richTextToPlainText, textRun } from "./blocks";
 import { SlashMenu, type BlockConversion } from "./SlashMenu";
 import { GripVertical, Lightbulb, Plus, Square, SquareCheck, X } from "lucide-react-native";
@@ -201,7 +202,7 @@ export function BlockRow({
       multiline={isCode}
       numberOfLines={isCode ? 8 : 1}
       placeholder={isCode ? "// code" : "Type / for blocks"}
-      placeholderTextColor={colors.inkFaint}
+      placeholderTextColor={colors.placeholder}
       className={`flex-1 py-1 ${TEXT_STYLES[block.type] ?? "text-base text-ink"}`}
       style={isCode ? { minHeight: 150, textAlignVertical: "top" } : undefined}
     />
@@ -222,7 +223,7 @@ export function BlockRow({
             placeholderTextColor={colors.inkFaint}
             autoCapitalize="none"
             autoCorrect={false}
-            className="min-w-0 flex-1 rounded border border-border bg-white px-2 py-1 text-xs text-ink"
+            className="min-w-0 flex-1 rounded border border-border bg-surface px-2 py-1 text-xs text-ink"
           />
         </View>
       </View>
@@ -289,15 +290,7 @@ export function BlockRow({
   } else if (block.type === "database") {
     body = c.type === "database" ? <DatabaseView databaseId={c.database_id} /> : null;
   } else if (block.type === "page_ref") {
-    const page = c.type === "page_ref" ? c : undefined;
-    // Page navigation lives outside this editor feature; the card is kept
-    // tappable so a host screen can wire it up later.
-    body = (
-      <Pressable accessibilityRole="link" className="flex-row items-center gap-2 rounded-lg border border-border px-3 py-2">
-        {page?.icon ? <Text className="text-lg">{page.icon}</Text> : <PageGlyph size={20} />}
-        <Text className="flex-1 text-base text-accent">{page?.title ?? "Untitled"}</Text>
-      </Pressable>
-    );
+    body = c.type === "page_ref" ? <PageRefCard pageId={c.page_id} title={c.title} icon={c.icon} /> : null;
   } else if (block.type === "table") {
     const table = c.type === "table" ? c : undefined;
     const rowCellCount = (row: BlockDTO) =>
@@ -369,24 +362,22 @@ export function BlockRow({
   }
 
   return (
-    <Pressable
+    <View
       ref={rowRef}
-      accessible={false}
-      focusable={false}
-      onHoverIn={() => setHover(true)}
-      onHoverOut={() => setHover(false)}
-      className="px-4 py-1"
+      onPointerEnter={() => setHover(true)}
+      onPointerLeave={() => setHover(false)}
+      className="py-1"
     >
       {dropPos ? (
         <View
           pointerEvents="none"
-          className="absolute left-4 right-4 h-0.5 bg-accent"
+          className="absolute left-0 right-0 h-0.5 bg-accent"
           style={dropPos === "before" ? { top: 0 } : { bottom: 0 }}
         />
       ) : null}
       <View className="flex-row items-start gap-2">
         {Platform.OS === "web" ? (
-          <View ref={handleRef} accessibilityLabel="Drag to reorder" className="pt-1" style={[chromeStyle, { cursor: "grab" } as object]}>
+          <View ref={handleRef} accessibilityLabel="Drag to reorder" className="h-8 items-center justify-center" style={[chromeStyle, { cursor: "grab" } as object]}>
             <GripVertical size={18} strokeWidth={1.5} color={colors.inkFaint} />
           </View>
         ) : null}
@@ -395,7 +386,7 @@ export function BlockRow({
           accessibilityRole="button"
           accessibilityLabel="Change block type"
           hitSlop={12}
-          className="pt-1"
+          className="h-8 items-center justify-center"
           style={chromeStyle}
           {...chromeFocus}
         >
@@ -408,7 +399,7 @@ export function BlockRow({
           accessibilityRole="button"
           accessibilityLabel="Delete block"
           hitSlop={12}
-          className="px-1 pt-1"
+          className="h-8 items-center justify-center px-1"
           style={chromeStyle}
           {...chromeFocus}
         >
@@ -428,7 +419,7 @@ export function BlockRow({
         onClose={() => setMenuVisible(false)}
         onSelect={(conversion) => onConvert(block.id, conversion)}
       />
-    </Pressable>
+    </View>
   );
 }
 

@@ -7,6 +7,8 @@ import { qk } from "@/lib/queryClient";
 import { usePageBreadcrumbs } from "@/hooks/usePageBreadcrumbs";
 import { Editor, type EditorHandle } from "@/features/editor/Editor";
 import { PageDatabases } from "@/components/PageDatabases";
+import { FeaturedStar } from "@/components/FeaturedStar";
+import { PageMenu } from "@/components/PageMenu";
 import { PageAttachments } from "@/components/PageAttachments";
 import { H1, Input, Loading, Muted, ErrorBanner } from "@/components/ui";
 
@@ -26,7 +28,11 @@ export default function PageScreen() {
 
   const rename = useMutation({
     mutationFn: (next: string) => updatePage(pageId!, { title: next }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.page(pageId) }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.page(pageId) });
+      void qc.invalidateQueries({ queryKey: qk.childPages }); // sidebar tree + featured
+      void qc.invalidateQueries({ queryKey: ["breadcrumbs"] });
+    },
   });
 
   useEffect(() => {
@@ -51,10 +57,10 @@ export default function PageScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerClassName="mx-auto w-full max-w-3xl flex-grow px-5 pt-8">
-      {breadcrumbs && breadcrumbs.length > 0 ? (
-        <View className="mb-4 flex-row flex-wrap items-center gap-1">
-          {breadcrumbs.map((crumb, i) => (
+    <ScrollView className="flex-1 bg-surface" contentContainerClassName="mx-auto w-full max-w-3xl flex-grow px-5 pt-8">
+      <View className="mb-4 flex-row items-center justify-between gap-2">
+        <View className="flex-1 flex-row flex-wrap items-center gap-1">
+          {breadcrumbs?.map((crumb, i) => (
             <Pressable
               key={crumb.id}
               onPress={() => router.push(`/(app)/page/${crumb.id}`)}
@@ -67,9 +73,12 @@ export default function PageScreen() {
               </Muted>
             </Pressable>
           ))}
-          <Muted className="text-xs"> / </Muted>
         </View>
-      ) : null}
+        <View className="flex-row items-center">
+          <FeaturedStar pageId={page.id} />
+          <PageMenu pageId={page.id} />
+        </View>
+      </View>
 
       {editingTitle ? (
         <Input

@@ -1,14 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Platform, Pressable, Text, View } from "react-native";
 import { router, usePathname } from "expo-router";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react-native";
 import type { PageSummaryDTO } from "@notion-clone/shared";
+import { usePageBreadcrumbs } from "@/hooks/usePageBreadcrumbs";
 import { useChildPages } from "@/hooks/useChildPages";
 import { useCreatePage } from "@/hooks/useCreatePage";
 import { useToast } from "@/stores/toast";
+import { SortMenu } from "@/components/SortMenu";
+import { useSidebarPrefs, type PageSort } from "@/stores/sidebarPrefs";
+import { PageMenu } from "@/components/PageMenu";
 import { PageGlyph } from "@/components/ui";
 import { colors } from "@/lib/theme";
 import { friendlyError } from "@/lib/friendlyError";
+
+const byDate =
+  (key: "updated_at" | "created_at") => (a: PageSummaryDTO, b: PageSummaryDTO) =>
+    (b[key] ?? "").localeCompare(a[key] ?? "");
+
+function sortPages(pages: PageSummaryDTO[] | undefined, sort: PageSort) {
+  if (!pages) return pages;
+  const az = (a: PageSummaryDTO, b: PageSummaryDTO) =>
+    (a.title || "Untitled").localeCompare(b.title || "Untitled");
+  const cmp = {
+    az,
+    za: (a: PageSummaryDTO, b: PageSummaryDTO) => az(b, a),
+    edited: byDate("updated_at"),
+    created: byDate("created_at"),
+  }[sort];
+  return [...pages].sort(cmp);
+}
 
 interface PageTreeProps {
   workspaceId: string;
@@ -18,7 +39,9 @@ interface PageTreeProps {
 
 /** Recursive sidebar tree. Each level loads its children with useChildPages. */
 export function PageTree({ workspaceId, parentId = null, depth = 0 }: PageTreeProps) {
-  const { data: pages, isLoading } = useChildPages(workspaceId, parentId);
+  const { data, isLoading } = useChildPages(workspaceId, parentId);
+  const sort = useSidebarPrefs((s) => s.sort);
+  const pages = sortPages(data, sort);
   const createPage = useCreatePage(workspaceId);
   const pathname = usePathname();
   const { showToast } = useToast();
@@ -43,25 +66,24 @@ export function PageTree({ workspaceId, parentId = null, depth = 0 }: PageTreePr
 
   return (
     <View>
-      <View className="mb-1 flex-row items-center justify-between px-2">
-        {depth === 0 ? (
-          <Text className="text-xs text-inkFaint">
-            Pages
-          </Text>
-        ) : (
-          <View />
-        )}
-        <Pressable
-          onPress={() => void handleCreate()}
-          disabled={creating}
-          accessibilityRole="button"
-          accessibilityLabel="New page"
-          hitSlop={8}
-          className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
-        >
-          <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
-        </Pressable>
-      </View>
+      {depth === 0 ? (
+        <View className="mb-1 flex-row items-center justify-between px-2">
+          <Text className="text-xs text-inkFaint">Pages</Text>
+          <View className="flex-row items-center">
+            <SortMenu />
+            <Pressable
+              onPress={() => void handleCreate()}
+              disabled={creating}
+              accessibilityRole="button"
+              accessibilityLabel="New page"
+              hitSlop={8}
+              className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
+            >
+              <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       {isLoading ? (
         <Text className="px-2 py-1 text-sm text-inkFaint">Loading…</Text>
@@ -104,6 +126,12 @@ function PageTreeNode({
   const [focused, setFocused] = useState(false);
   const showAdd = Platform.OS !== "web" || hover || focused;
   const active = page.id === activePageId;
+  // Reveal the open page: expand every ancestor (and the page itself, so new subpages show up).
+  const { data: crumbs } = usePageBreadcrumbs(activePageId);
+  const onActivePath = !!page.has_children && !!crumbs?.some((c) => c.id === page.id);
+  useEffect(() => {
+    if (onActivePath) setExpanded(true);
+  }, [onActivePath]);
   const indent = depth * 14;
 
   async function handleAddSubpage() {
@@ -124,11 +152,10 @@ function PageTreeNode({
 
   return (
     <View>
-      <Pressable
-        accessible={false}
-        focusable={false}
-        onHoverIn={() => setHover(true)}
-        onHoverOut={() => setHover(false)}
+      {/* View, not Pressable: RNW's Pressable ends hover when the pointer enters a nested Pressable. */}
+      <View
+        onPointerEnter={() => setHover(true)}
+        onPointerLeave={() => setHover(false)}
         className="flex-row items-center rounded-md py-1 pr-1"
         style={{
           paddingLeft: 6 + indent,
@@ -143,7 +170,11 @@ function PageTreeNode({
             hitSlop={8}
             className="h-8 w-6 items-center justify-center"
           >
-            {expanded ? <ChevronDown size={14} strokeWidth={1.5} color={colors.inkFaint} /> : <ChevronRight size={14} strokeWidth={1.5} color={colors.inkFaint} />}
+            {expanded ? (
+              <ChevronDown size={14} strokeWidth={1.5} color={colors.inkFaint} />
+            ) : (
+              <ChevronRight size={14} strokeWidth={1.5} color={colors.inkFaint} />
+            )}
           </Pressable>
         ) : (
           <View className="h-8 w-6" />
@@ -163,20 +194,24 @@ function PageTreeNode({
           </Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => void handleAddSubpage()}
-          disabled={creatingSub}
-          accessibilityRole="button"
-          accessibilityLabel="Add subpage"
-          hitSlop={8}
-          style={{ opacity: showAdd ? 1 : 0 }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
-        >
-          <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
-        </Pressable>
-      </Pressable>
+        {showAdd ? (
+          <>
+            <PageMenu pageId={page.id} />
+            <Pressable
+              onPress={() => void handleAddSubpage()}
+              disabled={creatingSub}
+              accessibilityRole="button"
+              accessibilityLabel="Add subpage"
+              hitSlop={8}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              className="h-8 w-8 items-center justify-center rounded-md active:bg-surface-hover"
+            >
+              <Plus size={16} strokeWidth={1.5} color={colors.inkLight} />
+            </Pressable>
+          </>
+        ) : null}
+      </View>
 
       {expanded && page.has_children ? (
         <View>

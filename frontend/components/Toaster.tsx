@@ -36,7 +36,7 @@ export function Toaster() {
             paddingHorizontal: 16,
             paddingVertical: 10,
             borderRadius: 8,
-            backgroundColor: toast.type === "error" ? colors.danger : colors.ink,
+            backgroundColor: toast.type === "error" ? colors.danger : "#37352f",
           }}
         >
           <Text style={{ flexShrink: 1, color: "#ffffff", fontSize: 14 }}>

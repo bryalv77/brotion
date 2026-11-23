@@ -72,7 +72,7 @@ export function BoardView({
                 {rows.map((row) => (
                   <View
                     key={row.page_id}
-                    className="rounded-lg border border-border bg-white p-2"
+                    className="rounded-lg border border-border bg-surface p-2"
                   >
                     <Text numberOfLines={2} className="text-sm font-medium text-ink">
                       {primary

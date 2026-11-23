@@ -155,6 +155,9 @@ export interface PageSummaryDTO {
   icon: string | null;
   parent_id: string | null;
   has_children: boolean;
+  /** ISO; present on tree listings so the sidebar can sort by date. */
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface PageDTO extends PageSummaryDTO {

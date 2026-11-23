@@ -1,3 +1,4 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -194,7 +195,7 @@ export function FilterSortBar({
 
       <ErrorBanner message={error} />
 
-      <Modal
+      <ThemedModal
         visible={modalOpen}
         animationType="fade"
         transparent
@@ -205,7 +206,7 @@ export function FilterSortBar({
           onPress={() => setModalOpen(false)}
         >
           <Pressable
-            className="max-h-[85%] gap-3 rounded-t-2xl bg-white p-5"
+            className="max-h-[85%] gap-3 rounded-t-2xl bg-surface p-5"
             onPress={(event) => event.stopPropagation()}
           >
             <H2>Filters &amp; sorting</H2>
@@ -283,7 +284,7 @@ export function FilterSortBar({
             />
           </Pressable>
         </Pressable>
-      </Modal>
+      </ThemedModal>
     </View>
   );
 }

@@ -1,3 +1,4 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addRow, listTemplates } from "@/lib/data/databases";
@@ -33,7 +34,7 @@ export function TemplatesModal({
   });
 
   return (
-    <Modal
+    <ThemedModal
       visible={visible}
       animationType="fade"
       transparent
@@ -41,7 +42,7 @@ export function TemplatesModal({
     >
       <Pressable className="flex-1 justify-end bg-black/40" onPress={onClose}>
         <Pressable
-          className="max-h-[80%] gap-3 rounded-t-2xl bg-white p-5"
+          className="max-h-[80%] gap-3 rounded-t-2xl bg-surface p-5"
           onPress={(event) => event.stopPropagation()}
         >
           <H2>Templates</H2>
@@ -79,6 +80,6 @@ export function TemplatesModal({
           <Button title="Cancel" variant="ghost" onPress={onClose} />
         </Pressable>
       </Pressable>
-    </Modal>
+    </ThemedModal>
   );
 }

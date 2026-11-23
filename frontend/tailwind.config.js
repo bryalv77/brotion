@@ -1,4 +1,7 @@
 /** @type {import('tailwindcss').Config} */
+// Values come from CSS variables set at the app root (lib/theme.ts applyPalette).
+const v = (n) => `rgb(var(--${n}) / <alpha-value>)`;
+
 module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
@@ -12,22 +15,22 @@ module.exports = {
     extend: {
       colors: {
         ink: {
-          DEFAULT: "#37352f",
-          light: "#5f5e5b",
-          faint: "#75736f",
+          DEFAULT: v("ink"),
+          light: v("ink-light"),
+          faint: v("ink-faint"),
         },
         surface: {
-          DEFAULT: "#ffffff",
-          sidebar: "#f7f7f5",
-          hover: "#efefed",
-          active: "#e7e6e3",
+          DEFAULT: v("bg"),
+          sidebar: v("sidebar"),
+          hover: v("hover"),
+          active: v("active"),
         },
         // Flat aliases: the code uses text-inkLight, text-inkFaint, border-border, bg-danger.
-        inkLight: "#5f5e5b",
-        inkFaint: "#75736f",
-        border: "#e9e9e7",
+        inkLight: v("ink-light"),
+        inkFaint: v("ink-faint"),
+        border: v("border"),
         danger: "#d44c47",
-        accent: "#1a6fc4",
+        accent: v("accent"),
       },
     },
   },

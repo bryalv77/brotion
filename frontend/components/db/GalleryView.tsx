@@ -35,7 +35,7 @@ export function GalleryView({
         <View
           key={row.page_id}
           style={{ width: cardWidth }}
-          className="overflow-hidden rounded-xl border border-border bg-white"
+          className="overflow-hidden rounded-xl border border-border bg-surface"
         >
           <View className="h-24 items-center justify-center bg-surface-hover">
             {db.icon ? <Text className="text-4xl">{db.icon}</Text> : <PageGlyph size={32} />}

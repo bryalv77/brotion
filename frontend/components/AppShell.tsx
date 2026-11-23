@@ -1,3 +1,4 @@
+import { ThemedModal } from "@/components/ThemedModal";
 import type React from "react";
 import { useState } from "react";
 import { Modal, Platform, Pressable, Text, View } from "react-native";
@@ -26,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (Platform.OS === "web") {
     return (
-      <View className="h-screen flex-row bg-white">
+      <View className="h-screen flex-row bg-surface">
         <View className="h-full shrink-0 border-r border-border" style={{ width: SIDEBAR_WIDTH }}>
           {sidebar}
         </View>
@@ -38,7 +39,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-surface">
       <View className="h-12 flex-row items-center border-b border-border px-3">
         <Pressable
           onPress={() => setDrawerOpen(true)}
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <View className="flex-1">{children}</View>
 
-      <Modal
+      <ThemedModal
         visible={drawerOpen}
         transparent
         animationType="slide"
@@ -72,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {sidebar}
           </SafeAreaView>
         </View>
-      </Modal>
+      </ThemedModal>
 
       <Toaster />
       <QuickSearch />

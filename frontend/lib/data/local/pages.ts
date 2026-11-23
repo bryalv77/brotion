@@ -21,6 +21,8 @@ function toSummary(p: LocalPage, hasChildren: boolean): PageSummaryDTO {
     icon: p.icon,
     parent_id: p.parent_id ?? null,
     has_children: hasChildren,
+    created_at: p.created_at,
+    updated_at: p.updated_at,
   };
 }
 

@@ -16,6 +16,8 @@ export function toPageSummaryDTO(
     icon: page.icon,
     parent_id: page.parent_id,
     has_children: Boolean(page._childCount && page._childCount > 0),
+    created_at: page.created_at.toISOString(),
+    updated_at: page.updated_at.toISOString(),
   };
 }
 
