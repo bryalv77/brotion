@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React from "react";
 import {
   ActivityIndicator,
@@ -19,12 +20,12 @@ export function Screen({
   ...rest
 }: ViewProps & { children: React.ReactNode; centered?: boolean; className?: string }) {
   return (
-    <View
+    <SafeAreaView
       className={`flex-1 bg-white ${centered ? "items-center justify-center" : ""} ${className}`}
       {...rest}
     >
       {children}
-    </View>
+    </SafeAreaView>
   );
 }
 

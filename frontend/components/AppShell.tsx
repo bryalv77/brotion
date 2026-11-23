@@ -2,6 +2,7 @@ import type React from "react";
 import { useState } from "react";
 import { Modal, Platform, Pressable, Text, View } from "react-native";
 import { usePathname } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Menu } from "lucide-react-native";
 import { colors } from "@/lib/theme";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
@@ -37,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <View className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white">
       <View className="h-12 flex-row items-center border-b border-border px-3">
         <Pressable
           onPress={() => setDrawerOpen(true)}
@@ -67,14 +68,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="absolute inset-0"
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           />
-          <View className="h-full" style={{ width: SIDEBAR_WIDTH }}>
+          <SafeAreaView className="h-full bg-surface-sidebar" style={{ width: SIDEBAR_WIDTH }}>
             {sidebar}
-          </View>
+          </SafeAreaView>
         </View>
       </Modal>
 
       <Toaster />
       <QuickSearch />
-    </View>
+    </SafeAreaView>
   );
 }
